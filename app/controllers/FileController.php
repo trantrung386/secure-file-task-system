@@ -11,12 +11,12 @@ use App\Models\Task;
 use App\Services\FileCryptoService;
 
 /**
- * Controller xử lý tải file công việc sau khi kiểm tra quyền truy cập.
+ * Controller xu ly tai file sau khi kiem tra quyen truy cap.
  */
 class FileController extends BaseController
 {
     /**
-     * Giải mã và stream file cho người dùng hợp lệ.
+     * Giai ma bang hybrid encryption va stream file cho nguoi dung hop le.
      */
     public function download(int $id): void
     {
@@ -26,30 +26,28 @@ class FileController extends BaseController
         $attachment = $attachmentModel->find($id);
 
         if (!$attachment) {
-            exit('File không tồn tại.');
+            exit('File khong ton tai.');
         }
 
         if (!(new Task())->canAccess(Auth::user(), (int) $attachment['task_id'])) {
             http_response_code(403);
-            exit('Bạn không có quyền tải file này.');
+            exit('Ban khong co quyen tai file nay.');
         }
 
         try {
-            $cryptoService = new FileCryptoService();
-            
-            // Nếu file có encrypted_key, sử dụng hybridDecrypt, nếu không sử dụng decrypt thường
-            if (!empty($attachment['encrypted_key']) && !empty($attachment['iv'])) {
-                $content = $cryptoService->hybridDecrypt(
-                    $attachment['encrypted_path'],
-                    $cryptoService->getRsaPrivateKey(),
-                    $attachment['encrypted_key'],
-                    $attachment['iv']
-                );
-            } else {
-                $content = $cryptoService->decrypt($attachment['encrypted_path']);
+            if (empty($attachment['encrypted_key']) || empty($attachment['iv'])) {
+                throw new \RuntimeException('File nay khong co khoa ma hoa RSA/AES hop le.');
             }
-            
-            (new Log())->create(Auth::user()['id'], 'download', 'attachment', $id, 'Tải file công việc');
+
+            $cryptoService = new FileCryptoService();
+            $content = $cryptoService->hybridDecrypt(
+                $attachment['encrypted_path'],
+                $cryptoService->getRsaPrivateKey(),
+                $attachment['encrypted_key'],
+                $attachment['iv']
+            );
+
+            (new Log())->create(Auth::user()['id'], 'download', 'attachment', $id, 'Tai file cong viec');
 
             header('Content-Description: File Transfer');
             header('Content-Type: ' . ($attachment['mime_type'] ?: 'application/octet-stream'));
@@ -58,7 +56,7 @@ class FileController extends BaseController
             echo $content;
             exit;
         } catch (\Throwable $e) {
-            exit('Không thể giải mã hoặc tải file: ' . $e->getMessage());
+            exit('Khong the giai ma hoac tai file: ' . $e->getMessage());
         }
     }
 }

@@ -340,7 +340,12 @@ class TaskController extends BaseController
             }
 
             // Mã hóa file
-            $stored = (new FileCryptoService())->encryptAndStore($file['tmp_name'], $file['name']);
+            $cryptoService = new FileCryptoService();
+            $stored = $cryptoService->hybridEncryptAndStore(
+                $file['tmp_name'],
+                $file['name'],
+                $cryptoService->getRsaPublicKey()
+            );
 
             // Lưu metadata
             $attachmentModel = new Attachment();
@@ -356,6 +361,8 @@ class TaskController extends BaseController
                 'uploaded_by' => $user['id'],
                 'file_type' => 'manager',
                 'upload_reason' => $reason ?: null,
+                'encrypted_key' => $stored['key'],
+                'iv' => $stored['iv'],
             ]);
 
             if ($ok) {
@@ -430,7 +437,12 @@ class TaskController extends BaseController
             }
 
             // Mã hóa file
-            $stored = (new FileCryptoService())->encryptAndStore($file['tmp_name'], $file['name']);
+            $cryptoService = new FileCryptoService();
+            $stored = $cryptoService->hybridEncryptAndStore(
+                $file['tmp_name'],
+                $file['name'],
+                $cryptoService->getRsaPublicKey()
+            );
 
             // Lưu metadata
             $attachmentModel = new Attachment();
@@ -446,6 +458,8 @@ class TaskController extends BaseController
                 'uploaded_by' => $user['id'],
                 'file_type' => 'project_manager',
                 'upload_reason' => $reason ?: null,
+                'encrypted_key' => $stored['key'],
+                'iv' => $stored['iv'],
             ]);
 
             if ($ok) {
