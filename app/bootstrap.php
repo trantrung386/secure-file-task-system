@@ -10,6 +10,9 @@ define('APP_PATH', __DIR__);
 define('STORAGE_PATH', BASE_PATH . '/storage');
 define('VIEW_PATH', APP_PATH . '/views');
 
+require APP_PATH . '/core/Env.php';
+\App\Core\Env::load(BASE_PATH . '/.env');
+
 require APP_PATH . '/config/config.php';
 
 spl_autoload_register(function (string $class): void {
@@ -32,13 +35,3 @@ spl_autoload_register(function (string $class): void {
 });
 
 require APP_PATH . '/core/helpers.php';
-
-/**
- * Khởi tạo RSA keypair cho hybrid encryption nếu chưa tồn tại.
- */
-try {
-    $cryptoService = new \App\Services\FileCryptoService();
-    $cryptoService->ensureRsaKeysExist();
-} catch (\Throwable $e) {
-    error_log('Failed to initialize RSA keys: ' . $e->getMessage());
-}

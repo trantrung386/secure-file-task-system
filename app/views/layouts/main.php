@@ -18,6 +18,14 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
     <link href="assets/css/app.css?v=20260404a" rel="stylesheet">
 </head>
 <body>
+<?php if ($flash): ?>
+    <div class="app-flash-container">
+        <div class="alert app-flash-alert alert-<?= e($flash['type']) ?> alert-dismissible fade show shadow-sm border-0 mb-0" role="alert">
+            <?= e($flash['message']) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </div>
+<?php endif; ?>
 <?php if ($isPublicPage): ?>
     <div class="public-site-shell">
         <header class="public-header">
@@ -40,13 +48,6 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
 
         <main class="public-main">
             <div class="public-container">
-                <?php if ($flash): ?>
-                    <div class="alert alert-<?= e($flash['type']) ?> alert-dismissible fade show shadow-sm border-0 mt-3">
-                        <?= e($flash['message']) ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                <?php endif; ?>
-
                 <?= $content ?>
             </div>
         </main>
@@ -60,12 +61,6 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
 <?php elseif ($isLoginPage): ?>
     <main class="auth-shell">
         <div class="container py-4 py-lg-5">
-            <?php if ($flash): ?>
-                <div class="alert alert-<?= e($flash['type']) ?> alert-dismissible fade show shadow-sm border-0 mb-4 mx-auto auth-flash">
-                    <?= e($flash['message']) ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            <?php endif; ?>
             <?= $content ?>
         </div>
     </main>
@@ -78,27 +73,25 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
             </div>
 
             <nav class="sidebar-menu">
-                <a class="menu-link <?= e(active_menu('dashboard/')) ?>" href="<?= e(route_url('dashboard/index')) ?>">
+                <a class="menu-link <?= e(active_menu('dashboard/')) ?>" href="<?= e(route_url('dashboard/index')) ?>" data-short-label="TG" title="Tổng quan">
                     <span>Tổng quan</span>
                 </a>
-                <a class="menu-link <?= e(active_menu('cong_viec/')) ?>" href="<?= e(route_url('cong_viec/index')) ?>">
+                <a class="menu-link <?= e(active_menu('cong_viec/')) ?>" href="<?= e(route_url('cong_viec/index')) ?>" data-short-label="CV" title="Quản lý công việc">
                     <span>Quản lý công việc</span>
                 </a>
-                <a class="menu-link <?= e(active_menu('kpi/')) ?>" href="<?= e(route_url('kpi/index')) ?>">
+                <a class="menu-link <?= e(active_menu('kpi/')) ?>" href="<?= e(route_url('kpi/index')) ?>" data-short-label="KPI" title="Báo cáo KPI">
                     <span>Báo cáo KPI</span>
                 </a>
 
-                <?php if (in_array($authUser['role'], ['admin', 'manager'], true)): ?>
-                    <a class="menu-link <?= e(active_menu('du_an/')) ?>" href="<?= e(route_url('du_an/index')) ?>">
-                        <span>Quản lý dự án</span>
-                    </a>
-                <?php endif; ?>
+                <a class="menu-link <?= e(active_menu('du_an/')) ?>" href="<?= e(route_url('du_an/index')) ?>" data-short-label="DA" title="Quản lý dự án">
+                    <span>Quản lý dự án</span>
+                </a>
 
                 <?php if ($authUser['role'] === 'admin'): ?>
-                    <a class="menu-link <?= e(active_menu('tai_khoan/')) ?>" href="<?= e(route_url('tai_khoan/index')) ?>">
+                    <a class="menu-link <?= e(active_menu('tai_khoan/')) ?>" href="<?= e(route_url('tai_khoan/index')) ?>" data-short-label="TK" title="Quản lý tài khoản">
                         <span>Quản lý tài khoản</span>
                     </a>
-                    <a class="menu-link <?= e(active_menu('nhat_ky/')) ?>" href="<?= e(route_url('nhat_ky/index')) ?>">
+                    <a class="menu-link <?= e(active_menu('nhat_ky/')) ?>" href="<?= e(route_url('nhat_ky/index')) ?>" data-short-label="NK" title="Nhật ký truy cập">
                         <span>Nhật ký truy cập</span>
                     </a>
                 <?php endif; ?>
@@ -111,6 +104,9 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
 
         <div class="main-shell">
             <header class="topbar shadow-sm">
+                <button class="sidebar-toggle" type="button" aria-label="Thu gọn hoặc mở menu" aria-expanded="true" data-sidebar-toggle>
+                    <span></span><span></span><span></span>
+                </button>
                 <div class="page-info">
                     <div class="page-label">TruTo Work</div>
                 </div>
@@ -125,13 +121,6 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
             </header>
 
             <main class="content-shell">
-                <?php if ($flash): ?>
-                    <div class="alert alert-<?= e($flash['type']) ?> alert-dismissible fade show shadow-sm border-0">
-                        <?= e($flash['message']) ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                <?php endif; ?>
-
                 <?= $content ?>
             </main>
         </div>
@@ -139,5 +128,54 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
 <?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    window.setTimeout(() => {
+        document.querySelectorAll('.app-flash-alert').forEach((alertElement) => {
+            bootstrap.Alert.getOrCreateInstance(alertElement).close();
+        });
+    }, 3000);
+
+    (() => {
+        const appShell = document.querySelector('.app-shell');
+        const toggle = document.querySelector('[data-sidebar-toggle]');
+        if (!appShell || !toggle) return;
+
+        const syncToggle = () => {
+            const expanded = !appShell.classList.contains('sidebar-collapsed') && !appShell.classList.contains('sidebar-open');
+            toggle.setAttribute('aria-expanded', String(expanded));
+        };
+
+        toggle.addEventListener('click', () => {
+            if (window.matchMedia('(max-width: 991.98px)').matches) {
+                appShell.classList.toggle('sidebar-open');
+            } else {
+                appShell.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('ttw:sidebar-collapsed', appShell.classList.contains('sidebar-collapsed') ? '1' : '0');
+            }
+            syncToggle();
+        });
+
+        if (localStorage.getItem('ttw:sidebar-collapsed') === '1' && !window.matchMedia('(max-width: 991.98px)').matches) {
+            appShell.classList.add('sidebar-collapsed');
+        }
+        window.addEventListener('resize', () => {
+            appShell.classList.remove('sidebar-open');
+            syncToggle();
+        });
+        syncToggle();
+    })();
+</script>
+<?php if ($authUser): ?>
+    <script>
+        window.E2E_APP = {
+            userId: <?= (int) $authUser['id'] ?>,
+            savePublicKeyUrl: '<?= e(route_url('crypto/savePublicKey')) ?>',
+            currentRecipientUrl: '<?= e(route_url('crypto/currentRecipient')) ?>',
+            projectRecipientsUrl: '<?= e(route_url('crypto/projectRecipients')) ?>'
+        };
+    </script>
+    <script src="assets/js/e2e-crypto.js?v=20260702e2e"></script>
+<?php endif; ?>
 </body>
 </html>
+

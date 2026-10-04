@@ -8,6 +8,12 @@ namespace App\Models;
  */
 class User extends BaseModel
 {
+    public function __construct()
+    {
+        parent::__construct();
+        $this->ensureE2EColumns();
+    }
+
     /**
      * Lấy toàn bộ tài khoản để Admin quản lý.
      */
@@ -118,5 +124,62 @@ class User extends BaseModel
         $newStatus = $user['status'] === 'active' ? 'inactive' : 'active';
         return $this->db->prepare('UPDATE tai_khoan SET status = :status WHERE id = :id')
             ->execute(['status' => $newStatus, 'id' => $id]);
+    }
+
+    public function savePublicKey(int $userId, string $publicKeyJwk): bool
+    {
+        $stmt = $this->db->prepare('UPDATE tai_khoan SET public_key_jwk = :public_key_jwk WHERE id = :id');
+        return $stmt->execute([
+            'id' => $userId,
+            'public_key_jwk' => $publicKeyJwk,
+        ]);
+    }
+
+    public function recipientsForTask(int $taskId): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT DISTINCT u.id, u.name, u.email, u.public_key_jwk
+             FROM tai_khoan u
+             INNER JOIN cong_viec t ON t.id = :task_id
+             INNER JOIN du_an p ON p.id = t.project_id
+             LEFT JOIN cong_viec_phu_trach cpt ON cpt.task_id = t.id AND cpt.user_id = u.id
+             LEFT JOIN thanh_vien_du_an pm_lead
+                ON pm_lead.project_id = t.project_id
+               AND pm_lead.user_id = u.id
+               AND pm_lead.project_role = 'lead'
+             WHERE u.status = 'active'
+               AND (
+                   u.role = 'admin'
+                   OR u.id = p.created_by
+                   OR pm_lead.user_id IS NOT NULL
+                   OR cpt.user_id IS NOT NULL
+               )
+             ORDER BY u.name"
+        );
+        $stmt->execute(['task_id' => $taskId]);
+        return $stmt->fetchAll();
+    }
+
+    public function recipientsForProject(int $projectId): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT DISTINCT u.id, u.name, u.email, u.public_key_jwk
+             FROM tai_khoan u
+             LEFT JOIN du_an p ON p.id = :project_id
+             LEFT JOIN thanh_vien_du_an pm ON pm.project_id = p.id AND pm.user_id = u.id
+             WHERE u.status = 'active'
+               AND (u.role = 'admin' OR u.id = p.created_by OR pm.user_id IS NOT NULL)
+             ORDER BY u.name"
+        );
+        $stmt->execute(['project_id' => $projectId]);
+        return $stmt->fetchAll();
+    }
+
+    private function ensureE2EColumns(): void
+    {
+        $stmt = $this->db->query("SHOW COLUMNS FROM tai_khoan LIKE 'public_key_jwk'");
+        if (!$stmt->fetch()) {
+            $this->db->exec('ALTER TABLE tai_khoan ADD COLUMN public_key_jwk LONGTEXT DEFAULT NULL AFTER password');
+        }
     }
 }

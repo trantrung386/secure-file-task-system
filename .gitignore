@@ -1,0 +1,22 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+.rnd
+*.pem
+*.key
+
+# Sensitive Storage & Uploads
+/storage/encrypted/*
+!/storage/encrypted/.gitkeep
+*.rar
+*.zip
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Scratch & Temporary Test Scripts
+/scratch/

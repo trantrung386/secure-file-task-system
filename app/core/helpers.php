@@ -202,7 +202,16 @@ function active_menu(string $routePrefix): string
 function project_can_delete(array $project, ?array $user = null): bool
 {
     $user = $user ?? current_user();
-    if ($user === null || !in_array($user['role'] ?? '', ['admin', 'manager'], true)) {
+    if ($user === null) {
+        return false;
+    }
+
+    $canManage = in_array($user['role'] ?? '', ['admin', 'manager'], true);
+    if (!$canManage && isset($project['id'])) {
+        $canManage = (new \App\Models\Project())->userCanManageProject($user, (int) $project['id']);
+    }
+
+    if (!$canManage) {
         return false;
     }
 
@@ -218,12 +227,27 @@ function can_manage_tasks(?array $user = null): bool
     return $user !== null && in_array($user['role'] ?? '', ['manager', 'admin'], true);
 }
 
+function can_manage_task_project(array $task, ?array $user = null): bool
+{
+    $user = $user ?? current_user();
+    if ($user === null) {
+        return false;
+    }
+
+    if (can_manage_tasks($user)) {
+        return true;
+    }
+
+    $projectId = (int) ($task['project_id'] ?? 0);
+    return $projectId > 0 && (new \App\Models\Project())->userCanManageProject($user, $projectId);
+}
+
 /**
  * Xác định công việc có thể phân công/điều chỉnh từ phía quản lý hay không.
  */
 function task_can_assign_action(array $task, ?array $user = null): bool
 {
-    if (!can_manage_tasks($user)) {
+    if (!can_manage_task_project($task, $user)) {
         return false;
     }
 
@@ -248,7 +272,7 @@ function task_can_employee_adjust(array $task, ?array $user = null): bool
  */
 function task_can_review(array $task, ?array $user = null): bool
 {
-    if (!can_manage_tasks($user)) {
+    if (!can_manage_task_project($task, $user)) {
         return false;
     }
 
@@ -260,7 +284,7 @@ function task_can_review(array $task, ?array $user = null): bool
  */
 function task_can_delete(array $task, ?array $user = null): bool
 {
-    if (!can_manage_tasks($user)) {
+    if (!can_manage_task_project($task, $user)) {
         return false;
     }
 

@@ -47,7 +47,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Chọn file</label>
-                            <input type="file" class="form-control" name="manager_attachment">
+                            <input type="file" class="form-control" name="manager_attachment" data-e2e-file data-recipient-url="<?= e(route_url('crypto/taskRecipients', ['id' => $task['id']])) ?>">
                             <div class="small text-secondary mt-2">
                                 File sẽ được mã hóa. Hỗ trợ: pdf, doc, docx, xls, xlsx, png, jpg, jpeg, txt. Max 5MB.
                             </div>
@@ -63,6 +63,7 @@
                 <button class="btn btn-primary">Lưu kết quả duyệt</button>
                 <a class="btn btn-outline-secondary" href="<?= e(route_url('cong_viec/show', ['id' => $task['id']])) ?>">Hủy</a>
             </div>
+            <div class="alert alert-info mt-3 d-none" data-e2e-status></div>
         </form>
     </div>
 </div>

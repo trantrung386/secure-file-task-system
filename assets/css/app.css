@@ -32,9 +32,11 @@ body {
 }
 
 .app-shell {
-    min-height: 100vh;
+    height: 100vh;
     display: grid;
     grid-template-columns: 280px 1fr;
+    overflow: hidden;
+    transition: grid-template-columns .22s ease;
 }
 
 .sidebar {
@@ -44,6 +46,10 @@ body {
     display: flex;
     flex-direction: column;
     gap: 24px;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: padding .22s ease;
 }
 
 .sidebar-brand {
@@ -111,6 +117,8 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .topbar {
@@ -122,6 +130,60 @@ body {
     align-items: center;
     gap: 20px;
     border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.sidebar-toggle {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.sidebar-toggle span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background: #334155;
+    border-radius: 1px;
+}
+
+.app-shell.sidebar-collapsed {
+    grid-template-columns: 82px 1fr;
+}
+
+.sidebar-collapsed .sidebar {
+    padding: 24px 12px;
+}
+
+.sidebar-collapsed .sidebar-brand {
+    padding: 10px 0;
+}
+
+.sidebar-collapsed .brand-title,
+.sidebar-collapsed .sidebar-footer,
+.sidebar-collapsed .menu-link span {
+    display: none;
+}
+
+.sidebar-collapsed .menu-link {
+    justify-content: center;
+    padding: 12px 6px;
+}
+
+.sidebar-collapsed .menu-link::after {
+    content: attr(data-short-label);
+    font-size: 0.75rem;
+    font-weight: 800;
 }
 
 .page-info {
@@ -345,9 +407,24 @@ textarea.form-control {
 @media (max-width: 991.98px) {
     .app-shell {
         grid-template-columns: 1fr;
+        overflow: visible;
     }
     .sidebar {
-        padding-bottom: 10px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 30;
+        width: 280px;
+        transform: translateX(-100%);
+        transition: transform .22s ease;
+        box-shadow: var(--shadow-card);
+    }
+    .app-shell.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+    .main-shell {
+        min-height: 100vh;
+        overflow: visible;
     }
     .topbar {
         padding: 18px;
@@ -1193,37 +1270,57 @@ body {
 
 
 .project-actions-cell {
-    min-width: 320px;
+    min-width: 292px;
+    vertical-align: middle;
+    text-align: center;
 }
 
 .project-actions-head {
-    min-width: 320px;
+    min-width: 292px;
+    text-align: center;
 }
 
 .project-actions-head-grid {
-    display: grid;
-    grid-template-columns: 96px 104px 72px;
-    gap: 10px;
-    justify-content: end;
+    display: block;
 }
 
 .project-actions-head-label {
-    grid-column: 2;
     display: block;
     text-align: center;
 }
 
 .project-actions-grid {
-    display: grid;
-    grid-template-columns: 96px 104px 72px;
-    gap: 10px;
-    justify-content: end;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    justify-content: center;
     align-items: center;
 }
 
 .project-action-slot {
     display: flex;
-    justify-content: flex-end;
+    flex: 0 0 auto;
+    justify-content: stretch;
+}
+
+.project-action-slot:nth-child(1) {
+    width: 82px;
+}
+
+.project-action-slot:nth-child(2) {
+    width: 94px;
+}
+
+.project-action-slot:nth-child(3) {
+    width: 102px;
+}
+
+.project-action-slot:nth-child(4) {
+    width: 68px;
+}
+
+.project-action-slot .btn {
+    white-space: nowrap;
 }
 
 .project-action-slot form {
@@ -1237,41 +1334,30 @@ body {
     min-height: 34px;
 }
 
-@media (max-width: 1200px) {
-    .project-actions-cell,
-    .project-actions-head {
-        min-width: 250px;
-    }
+.app-flash-container {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    z-index: 1080;
+    width: min(420px, calc(100vw - 32px));
+}
 
-    .project-actions-grid,
-    .project-actions-head-grid {
-        grid-template-columns: repeat(2, minmax(96px, 1fr));
-        justify-content: stretch;
-    }
-
-    .project-actions-head-label {
-        grid-column: 2;
-    }
+.app-flash-alert {
+    margin: 0;
 }
 
 @media (max-width: 768px) {
     .project-actions-cell,
     .project-actions-head {
-        min-width: 220px;
-    }
-
-    .project-actions-grid,
-    .project-actions-head-grid {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-
-    .project-actions-head-label {
-        grid-column: 1;
-        text-align: left;
+        min-width: 292px;
     }
 
     .project-action-slot {
-        justify-content: stretch;
+        flex-basis: auto;
+    }
+
+    .app-flash-container {
+        top: 12px;
+        right: 16px;
     }
 }

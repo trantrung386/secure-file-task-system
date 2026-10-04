@@ -38,6 +38,11 @@ class Task extends BaseModel
         if ($user['role'] === 'employee') {
             $conditions[] = '(t.assignee_id = :uid OR EXISTS (
                 SELECT 1 FROM cong_viec_phu_trach cpt WHERE cpt.task_id = t.id AND cpt.user_id = :uid
+            ) OR EXISTS (
+                SELECT 1 FROM thanh_vien_du_an pm_lead
+                WHERE pm_lead.project_id = t.project_id
+                  AND pm_lead.user_id = :uid
+                  AND pm_lead.project_role = \'lead\'
             ))';
             $params['uid'] = (int) $user['id'];
         } elseif ($user['role'] === 'manager') {
@@ -75,20 +80,20 @@ class Task extends BaseModel
     public function find(int $id): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT t.*, p.name AS project_name, p.code AS project_code,
+            "SELECT t.*, p.name AS project_name, p.code AS project_code,
                     assignee.name AS assignee_name,
                     COALESCE(NULLIF((
-                        SELECT GROUP_CONCAT(DISTINCT u.name ORDER BY u.name SEPARATOR ", ")
+                        SELECT GROUP_CONCAT(DISTINCT u.name ORDER BY u.name SEPARATOR ', ')
                         FROM cong_viec_phu_trach cpt
                         INNER JOIN tai_khoan u ON u.id = cpt.user_id
                         WHERE cpt.task_id = t.id
-                    ), ""), assignee.name) AS assignee_names,
+                    ), ''), assignee.name) AS assignee_names,
                     creator.name AS creator_name
              FROM cong_viec t
              INNER JOIN du_an p ON p.id = t.project_id
              LEFT JOIN tai_khoan assignee ON assignee.id = t.assignee_id
              LEFT JOIN tai_khoan creator ON creator.id = t.created_by
-             WHERE t.id = :id LIMIT 1'
+             WHERE t.id = :id LIMIT 1"
         );
         $stmt->execute(['id' => $id]);
         return $stmt->fetch() ?: null;
@@ -318,7 +323,8 @@ class Task extends BaseModel
             return false;
         }
 
-        if (!in_array($user['role'] ?? '', ['manager', 'admin'], true)) {
+        if (!in_array($user['role'] ?? '', ['manager', 'admin'], true)
+            && !(new Project())->userCanManageProject($user, (int) $task['project_id'])) {
             return false;
         }
 

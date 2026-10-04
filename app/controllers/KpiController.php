@@ -22,15 +22,7 @@ class KpiController extends BaseController
         $this->requireLogin();
         $user = Auth::user();
 
-        $filters = [
-            'project_id' => $_GET['project_id'] ?? '',
-            'from_date' => $_GET['from_date'] ?? '',
-            'to_date' => $_GET['to_date'] ?? '',
-        ];
-
-        if ($user['role'] !== 'employee') {
-            $filters['employee_id'] = $_GET['employee_id'] ?? '';
-        }
+        $filters = $this->sanitizeKpiFilters($_GET, $user);
 
         $service = new KpiService();
         $rows = $user['role'] === 'employee'
@@ -51,15 +43,7 @@ class KpiController extends BaseController
         $this->requireLogin();
         $user = Auth::user();
 
-        $filters = [
-            'project_id' => $_GET['project_id'] ?? '',
-            'from_date' => $_GET['from_date'] ?? '',
-            'to_date' => $_GET['to_date'] ?? '',
-        ];
-
-        if ($user['role'] !== 'employee') {
-            $filters['employee_id'] = $_GET['employee_id'] ?? '';
-        }
+        $filters = $this->sanitizeKpiFilters($_GET, $user);
 
         $service = new KpiService();
         $rows = $user['role'] === 'employee'
@@ -69,5 +53,34 @@ class KpiController extends BaseController
         header('Content-Type: application/json');
         echo json_encode(['rows' => $rows]);
         exit;
+    }
+
+    private function sanitizeKpiFilters(array $get, array $user): array
+    {
+        $projectId = \App\Core\Validator::validateId($get['project_id'] ?? null);
+        $fromDate = trim((string) ($get['from_date'] ?? ''));
+        $toDate = trim((string) ($get['to_date'] ?? ''));
+
+        $filters = [
+            'project_id' => $projectId !== null ? (string) $projectId : '',
+            'from_date' => $this->isValidDate($fromDate) ? $fromDate : '',
+            'to_date' => $this->isValidDate($toDate) ? $toDate : '',
+        ];
+
+        if ($user['role'] !== 'employee') {
+            $employeeId = \App\Core\Validator::validateId($get['employee_id'] ?? null);
+            $filters['employee_id'] = $employeeId !== null ? (string) $employeeId : '';
+        }
+
+        return $filters;
+    }
+
+    private function isValidDate(string $date): bool
+    {
+        if ($date === '') {
+            return false;
+        }
+        $d = \DateTime::createFromFormat('Y-m-d', $date);
+        return $d && $d->format('Y-m-d') === $date;
     }
 }

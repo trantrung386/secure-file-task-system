@@ -3,7 +3,17 @@
         <div class="section-title">Quản lý công việc</div>
         <p class="section-desc">Theo dõi danh sách công việc theo trạng thái và thao tác phù hợp.</p>
     </div>
-    <?php if (can_manage_tasks()): ?>
+    <?php
+    $projectAccessModel = new \App\Models\Project();
+    $canManageAnyProject = can_manage_tasks();
+    foreach ($du_an as $project) {
+        if ($projectAccessModel->userCanManageProject(current_user(), (int) $project['id'])) {
+            $canManageAnyProject = true;
+            break;
+        }
+    }
+    ?>
+    <?php if ($canManageAnyProject): ?>
         <a href="<?= e(route_url('cong_viec/create')) ?>" class="btn btn-primary">+ Tạo công việc</a>
     <?php endif; ?>
 </div>

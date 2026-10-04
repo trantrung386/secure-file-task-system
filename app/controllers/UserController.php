@@ -42,8 +42,23 @@ class UserController extends BaseController
             \redirect('tai_khoan/index');
         }
 
+        $validator = \App\Core\Validator::make($_POST, [
+            'name' => 'required|string|min:2|max:100',
+            'email' => 'required|email|max:150',
+            'password' => 'required|string|min:6|max:100',
+            'role' => 'required|in:admin,manager,employee',
+            'department' => 'string|max:100',
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        if ($validator->fails()) {
+            \flash('danger', $validator->firstError());
+            \redirect('tai_khoan/create');
+        }
+
+        $validated = $validator->validated();
         $model = new User();
-        $email = trim($_POST['email'] ?? '');
+        $email = $validated['email'];
 
         if ($model->findByEmail($email)) {
             \flash('danger', 'Email đã tồn tại.');
@@ -51,12 +66,12 @@ class UserController extends BaseController
         }
 
         $ok = $model->create([
-            'name' => trim($_POST['name'] ?? ''),
+            'name' => $validated['name'],
             'email' => $email,
             'password' => (string) ($_POST['password'] ?? ''),
-            'role' => $_POST['role'] ?? 'employee',
-            'department' => trim($_POST['department'] ?? ''),
-            'status' => $_POST['status'] ?? 'active',
+            'role' => $validated['role'],
+            'department' => $validated['department'] ?? '',
+            'status' => $validated['status'],
         ]);
 
         if ($ok) {
@@ -76,6 +91,10 @@ class UserController extends BaseController
     {
         $this->requireRole(['admin']);
         $user = (new User())->find($id);
+        if (!$user) {
+            \flash('danger', 'Không tìm thấy tài khoản.');
+            \redirect('tai_khoan/index');
+        }
         $this->render('tai_khoan/form', ['user' => $user], 'Cập nhật tài khoản');
     }
 
@@ -89,14 +108,49 @@ class UserController extends BaseController
             \redirect('tai_khoan/index');
         }
 
-        $ok = (new User())->update($id, [
-            'name' => trim($_POST['name'] ?? ''),
-            'email' => trim($_POST['email'] ?? ''),
-            'password' => (string) ($_POST['password'] ?? ''),
-            'role' => $_POST['role'] ?? 'employee',
-            'department' => trim($_POST['department'] ?? ''),
-            'status' => $_POST['status'] ?? 'active',
-        ]);
+        $userModel = new User();
+        $user = $userModel->find($id);
+        if (!$user) {
+            \flash('danger', 'Không tìm thấy tài khoản.');
+            \redirect('tai_khoan/index');
+        }
+
+        $rules = [
+            'name' => 'required|string|min:2|max:100',
+            'email' => 'required|email|max:150',
+            'role' => 'required|in:admin,manager,employee',
+            'department' => 'string|max:100',
+            'status' => 'required|in:active,inactive',
+        ];
+        if (!empty($_POST['password'])) {
+            $rules['password'] = 'string|min:6|max:100';
+        }
+
+        $validator = \App\Core\Validator::make($_POST, $rules);
+        if ($validator->fails()) {
+            \flash('danger', $validator->firstError());
+            \redirect('tai_khoan/edit', ['id' => $id]);
+        }
+
+        $validated = $validator->validated();
+        $existing = $userModel->findByEmail($validated['email']);
+        if ($existing && (int) $existing['id'] !== $id) {
+            \flash('danger', 'Email đã được sử dụng bởi tài khoản khác.');
+            \redirect('tai_khoan/edit', ['id' => $id]);
+        }
+
+        $payload = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'role' => $validated['role'],
+            'department' => $validated['department'] ?? '',
+            'status' => $validated['status'],
+        ];
+        if (!empty($_POST['password'])) {
+            $payload['password'] = (string) $_POST['password'];
+        }
+
+        $ok = $userModel->update($id, $payload);
 
         if ($ok) {
             (new Log())->create(Auth::user()['id'], 'update', 'user', $id, 'Cập nhật tài khoản');

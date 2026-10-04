@@ -105,21 +105,22 @@
             <div class="row g-3 mt-3">
                 <div class="col-12">
                     <hr>
-                    <h5 class="mb-3">📤 Upload file tài liệu dự án (Tuỳ chọn)</h5>
+                    <h5 class="mb-3">📤 Upload tài liệu phân công (Tùy chọn)</h5>
                     <div class="row g-3">
                         <div class="col-12 col-lg-6">
                             <label class="form-label fw-semibold">Chọn file</label>
-                            <input type="file" class="form-control" name="attachments[]" id="attachments" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt">
+                            <input type="file" class="form-control" name="attachment" id="attachment" data-e2e-file data-recipient-url="<?= e(route_url('crypto/taskRecipients', ['id' => $task['id']])) ?>" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt">
                             <div id="assignment_error" class="alert alert-danger alert-sm mt-2" style="display:none;"></div>
-                            <div id="selectedFiles" class="mt-2 text-truncate text-muted"></div>
-                            <div class="small text-secondary mt-2">File sẽ được mã hóa. Hỗ trợ: pdf, doc, docx, xls, xlsx, png, jpg, jpeg, txt. Max 20MB mỗi file.</div>
+                            <div id="selectedFile" class="mt-2 text-truncate text-muted"></div>
+                            <div class="small text-secondary mt-2">File sẽ được mã hóa E2E và lưu trong CSDL. Hỗ trợ: pdf, doc, docx, xls, xlsx, png, jpg, jpeg, txt. Max 20MB.</div>
                         </div>
 
                         <div class="col-12 col-lg-6">
                             <label class="form-label fw-semibold">Lý do/Mô tả file</label>
-                            <input type="text" class="form-control" name="attachment_note" id="attachment_note" placeholder="VD: Tài liệu yêu cầu, hướng dẫn chi tiết, file mẫu, ...">
+                            <input type="text" class="form-control" name="upload_reason" id="upload_reason" placeholder="VD: Tài liệu yêu cầu, hướng dẫn chi tiết, file mẫu, ...">
                         </div>
                     </div>
+                    <div class="alert alert-info mt-3 d-none" data-e2e-status></div>
                 </div>
             </div>
 
@@ -183,8 +184,8 @@
 <script>
 // Show selected file names and validate uploads (size + extension)
 (function () {
-    const attachments = document.getElementById('attachments');
-    const selectedFiles = document.getElementById('selectedFiles');
+    const attachments = document.getElementById('attachment');
+    const selectedFiles = document.getElementById('selectedFile');
     const errorDiv = document.getElementById('assignment_error');
     const submitBtn = document.getElementById('assign_submit_btn');
     if (!attachments) return;
@@ -193,29 +194,25 @@
     const maxBytes = 20 * 1024 * 1024; // 20MB
 
     const render = () => {
-        const files = Array.from(attachments.files || []);
-        if (!files.length) {
+        const file = attachments.files && attachments.files[0];
+        if (!file) {
             if (selectedFiles) selectedFiles.textContent = '';
             if (errorDiv) errorDiv.style.display = 'none';
             if (submitBtn) submitBtn.disabled = false;
             return;
         }
 
-        // show names
-        if (selectedFiles) selectedFiles.textContent = files.map(f => f.name).join(', ');
+        if (selectedFiles) selectedFiles.textContent = file.name;
 
-        // validate
         const errors = [];
-        files.forEach(file => {
-            if (file.size > maxBytes) {
-                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                errors.push(`❌ ${file.name} vượt quá ${sizeMB}MB (hạn 20MB)`);
-            }
-            const ext = (file.name.split('.').pop() || '').toLowerCase();
-            if (!allowedExt.includes(ext)) {
-                errors.push(`❌ ${file.name} định dạng .${ext} không được hỗ trợ`);
-            }
-        });
+        if (file.size > maxBytes) {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            errors.push(`❌ ${file.name} vượt quá ${sizeMB}MB (hạn 20MB)`);
+        }
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (!allowedExt.includes(ext)) {
+            errors.push(`❌ ${file.name} định dạng .${ext} không được hỗ trợ`);
+        }
 
         if (errors.length) {
             if (errorDiv) {

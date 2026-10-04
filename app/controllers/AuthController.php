@@ -22,7 +22,19 @@ class AuthController extends BaseController
         }
 
         if (\is_post()) {
-            $email = trim($_POST['email'] ?? '');
+            $validator = \App\Core\Validator::make($_POST, [
+                'email' => 'required|email|max:150',
+                'password' => 'required|string|min:1|max:255',
+            ]);
+
+            if ($validator->fails()) {
+                \flash('danger', $validator->firstError());
+                $this->render('auth/login', [], 'Đăng nhập');
+                return;
+            }
+
+            $validated = $validator->validated();
+            $email = $validated['email'];
             $password = (string) ($_POST['password'] ?? '');
 
             if (Auth::attempt($email, $password)) {

@@ -5,9 +5,10 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\BaseController;
+use App\Models\Attachment;
 use App\Models\Log;
 use App\Models\Project;
-use App\Services\FileCryptoService;
+use App\Services\AttachmentModuleService;
 
 class ProjectController extends BaseController
 {
@@ -16,9 +17,38 @@ class ProjectController extends BaseController
      */
     public function index(): void
     {
-        $this->requireRole(['admin', 'manager']);
+        $this->requireLogin();
         $du_an = (new Project())->forUser(Auth::user());
         $this->render('du_an/index', ['du_an' => $du_an], 'Quản lý dự án');
+    }
+
+    /**
+     * Hiển thị thông tin tổng hợp của một dự án có quyền truy cập.
+     */
+    public function show(int $id): void
+    {
+        $this->requireLogin();
+        $projectModel = new Project();
+        $project = $projectModel->find($id);
+        $user = Auth::user();
+        $canAccessProject = $project
+            && (
+                ($user['role'] ?? '') === 'admin'
+                || (int) $project['created_by'] === (int) $user['id']
+                || $projectModel->userBelongsToProject($id, (int) $user['id'])
+            );
+
+        if (!$canAccessProject) {
+            http_response_code(403);
+            exit('Bạn không có quyền xem dự án này.');
+        }
+
+        $members = $projectModel->members($id);
+        $projectFiles = (new Attachment())->byProject($id);
+        $tasks = (new \App\Models\Task())->forUser($user, ['project_id' => $id]);
+        $canManageProject = $projectModel->userCanManageProject($user, $id);
+
+        $this->render('du_an/show', compact('project', 'members', 'projectFiles', 'tasks', 'canManageProject'), 'Chi tiết dự án');
     }
 
     /**
@@ -47,6 +77,23 @@ class ProjectController extends BaseController
 
         $user = Auth::user();
         $model = new Project();
+
+        $validator = \App\Core\Validator::make($_POST, [
+            'name' => 'required|string|min:2|max:255',
+            'description' => 'string',
+            'priority' => 'required|in:low,medium,high',
+            'status' => 'required|in:planning,active,completed',
+        ]);
+
+        if ($validator->fails()) {
+            $this->render('du_an/form', [
+                'project' => $_POST,
+                'generatedCode' => $model->generateNextCode(),
+                'validationError' => $validator->firstError(),
+            ], 'Tạo dự án');
+            return;
+        }
+
         $payload = $this->projectPayloadFromPost(['created_by' => $user['id']]);
         $dateError = $this->validateDateRange($payload['start_date'], $payload['end_date']);
 
@@ -76,10 +123,16 @@ class ProjectController extends BaseController
      */
     public function edit(int $id): void
     {
-        $this->requireRole(['manager', 'admin']);
-        $project = (new Project())->find($id);
+        $this->requireLogin();
+        $model = new Project();
+        $project = $model->find($id);
         if (!$project) {
             \flash('danger', 'Không tìm thấy dự án.');
+            \redirect('du_an/index');
+        }
+
+        if (!$model->userCanManageProject(Auth::user(), $id)) {
+            \flash('danger', 'Bạn không có quyền cập nhật dự án này.');
             \redirect('du_an/index');
         }
 
@@ -95,7 +148,7 @@ class ProjectController extends BaseController
      */
     public function update(int $id): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         if (!\is_post()) {
             \redirect('du_an/index');
         }
@@ -105,6 +158,27 @@ class ProjectController extends BaseController
         if (!$existingProject) {
             \flash('danger', 'Không tìm thấy dự án để cập nhật.');
             \redirect('du_an/index');
+        }
+
+        if (!$model->userCanManageProject(Auth::user(), $id)) {
+            \flash('danger', 'Bạn không có quyền cập nhật dự án này.');
+            \redirect('du_an/index');
+        }
+
+        $validator = \App\Core\Validator::make($_POST, [
+            'name' => 'required|string|min:2|max:255',
+            'description' => 'string',
+            'priority' => 'required|in:low,medium,high',
+            'status' => 'required|in:planning,active,completed',
+        ]);
+
+        if ($validator->fails()) {
+            $this->render('du_an/form', [
+                'project' => array_merge($existingProject, $_POST),
+                'generatedCode' => $existingProject['code'] ?? '',
+                'validationError' => $validator->firstError(),
+            ], 'Cập nhật dự án');
+            return;
         }
 
         $payload = $this->projectPayloadFromPost();
@@ -123,7 +197,11 @@ class ProjectController extends BaseController
 
         if ($ok) {
             (new Log())->create(Auth::user()['id'], 'update', 'project', $id, 'Cập nhật dự án');
-            \flash('success', 'Cập nhật dự án thành công.');
+            if (!empty($_FILES['project_attachment']['name'])) {
+                $this->handleProjectFileUpload($id);
+            } else {
+                \flash('success', 'Cập nhật dự án thành công.');
+            }
         } else {
             \flash('danger', 'Cập nhật dự án thất bại.');
         }
@@ -136,7 +214,7 @@ class ProjectController extends BaseController
      */
     public function destroy(int $id): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         if (!\is_post()) {
             \redirect('du_an/index');
         }
@@ -145,6 +223,11 @@ class ProjectController extends BaseController
         $project = $model->find($id);
         if (!$project) {
             \flash('danger', 'Không tìm thấy dự án.');
+            \redirect('du_an/index');
+        }
+
+        if (!$model->userCanManageProject(Auth::user(), $id)) {
+            \flash('danger', 'Ban khong co quyen xoa du an nay.');
             \redirect('du_an/index');
         }
 
@@ -169,14 +252,28 @@ class ProjectController extends BaseController
      */
     public function members(int $id): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         $model = new Project();
 
         $project = $model->find($id);
-        $members = $model->members($id);
-        $availableUsers = $model->availableEmployees($id);
+        $user = Auth::user();
+        $canAccessProject = $project
+            && (
+                ($user['role'] ?? '') === 'admin'
+                || (int) $project['created_by'] === (int) $user['id']
+                || $model->userBelongsToProject($id, (int) $user['id'])
+            );
+        if (!$canAccessProject) {
+            http_response_code(403);
+            exit('Ban khong co quyen xem du an nay.');
+        }
 
-        $this->render('du_an/members', compact('project', 'members', 'availableUsers'), 'Thành viên dự án');
+        $members = $model->members($id);
+        $canManageProject = $model->userCanManageProject($user, $id);
+        $availableUsers = $canManageProject ? $model->availableEmployees($id) : [];
+        $projectFiles = (new Attachment())->byProject($id);
+
+        $this->render('du_an/members', compact('project', 'members', 'availableUsers', 'projectFiles', 'canManageProject'), 'Thanh vien du an');
     }
 
     /**
@@ -184,13 +281,29 @@ class ProjectController extends BaseController
      */
     public function addMember(int $projectId): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         if (!\is_post()) {
             \redirect('du_an/members', ['id' => $projectId]);
         }
 
-        $userId = (int) ($_POST['user_id'] ?? 0);
-        $projectRole = $_POST['project_role'] ?? 'member';
+        if (!(new Project())->userCanManageProject(Auth::user(), $projectId)) {
+            \flash('danger', 'Ban khong co quyen them thanh vien vao du an nay.');
+            \redirect('du_an/members', ['id' => $projectId]);
+        }
+
+        $validator = \App\Core\Validator::make($_POST, [
+            'user_id' => 'required|positive_int',
+            'project_role' => 'required|in:lead,member',
+        ]);
+
+        if ($validator->fails()) {
+            \flash('danger', $validator->firstError());
+            \redirect('du_an/members', ['id' => $projectId]);
+        }
+
+        $validated = $validator->validated();
+        $userId = (int) $validated['user_id'];
+        $projectRole = $validated['project_role'];
         $ok = (new Project())->addMember($projectId, $userId, $projectRole);
 
         if ($ok) {
@@ -208,8 +321,18 @@ class ProjectController extends BaseController
      */
     public function removeMember(int $projectId): void
     {
-        $this->requireRole(['manager', 'admin']);
-        $userId = (int) ($_GET['user_id'] ?? 0);
+        $this->requireLogin();
+        $userId = \App\Core\Validator::validateId($_GET['user_id'] ?? null);
+
+        if ($userId === null) {
+            \flash('danger', 'ID thành viên không hợp lệ.');
+            \redirect('du_an/members', ['id' => $projectId]);
+        }
+
+        if (!(new Project())->userCanManageProject(Auth::user(), $projectId)) {
+            \flash('danger', 'Ban khong co quyen xoa thanh vien khoi du an nay.');
+            \redirect('du_an/members', ['id' => $projectId]);
+        }
 
         $ok = (new Project())->removeMember($projectId, $userId);
         if ($ok) {
@@ -272,42 +395,18 @@ class ProjectController extends BaseController
         }
 
         try {
-            if ((int) $file['size'] > MAX_UPLOAD_BYTES) {
-                \flash('warning', 'File dự án vượt quá 20MB, bỏ qua upload.');
-                return;
-            }
-
-            $allowedExt = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'txt'];
-            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            if (!in_array($extension, $allowedExt, true)) {
-                \flash('warning', 'Định dạng file dự án không được hỗ trợ, bỏ qua upload.');
-                return;
-            }
-
-            $cryptoService = new FileCryptoService();
-            $stored = $cryptoService->hybridEncryptAndStore(
-                $file['tmp_name'],
-                $file['name'],
-                $cryptoService->getRsaPublicKey()
-            );
-            $attachmentModel = new \App\Models\Attachment();
             $reason = trim($_POST['upload_reason'] ?? '');
-
-            $ok = $attachmentModel->create([
+            $attachmentId = (new AttachmentModuleService())->storeE2EUpload($file, [
                 'task_id' => null,
-                'original_name' => $file['name'],
-                'stored_name' => $stored['stored_name'],
-                'mime_type' => $file['type'] ?: 'application/octet-stream',
-                'file_size' => (int) $file['size'],
-                'encrypted_path' => $stored['path'],
+                'project_id' => $projectId,
+                'module_name' => 'du_an',
                 'uploaded_by' => $user['id'],
                 'file_type' => 'project_manager',
                 'upload_reason' => $reason ?: null,
-                'encrypted_key' => $stored['key'],
-                'iv' => $stored['iv'],
+                'encrypted_key' => null,
             ]);
 
-            if ($ok) {
+            if ($attachmentId !== false) {
                 (new Log())->create($user['id'], 'upload', 'project_attachment', $projectId, "Upload file dự án: $reason");
                 \flash('info', 'File tài liệu dự án đã upload và mã hóa.');
             } else {

@@ -9,7 +9,7 @@ use App\Models\Attachment;
 use App\Models\Log;
 use App\Models\Project;
 use App\Models\Task;
-use App\Services\FileCryptoService;
+use App\Services\AttachmentModuleService;
 
 /**
  * Controller cho toàn bộ nghiệp vụ công việc.
@@ -24,9 +24,16 @@ class TaskController extends BaseController
         $this->requireLogin();
         $user = Auth::user();
 
+        $rawStatus = (string) ($_GET['status'] ?? '');
+        $rawProjectId = $_GET['project_id'] ?? '';
+
+        $statusAllowed = ['new', 'assigned', 'in_progress', 'blocked', 'submitted', 'approved', 'redo'];
+        $cleanStatus = in_array($rawStatus, $statusAllowed, true) ? $rawStatus : '';
+        $cleanProjectId = \App\Core\Validator::validateId($rawProjectId);
+
         $filters = [
-            'status' => $_GET['status'] ?? '',
-            'project_id' => $_GET['project_id'] ?? '',
+            'status' => $cleanStatus,
+            'project_id' => $cleanProjectId !== null ? (string) $cleanProjectId : '',
         ];
 
         $taskModel = new Task();
@@ -64,7 +71,7 @@ class TaskController extends BaseController
      */
     public function create(): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         $du_an = (new Project())->forUser(Auth::user());
         $this->render('cong_viec/form', ['task' => null, 'du_an' => $du_an], 'Tạo công việc');
     }
@@ -74,20 +81,48 @@ class TaskController extends BaseController
      */
     public function store(): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         if (!\is_post()) {
             \redirect('cong_viec/index');
         }
 
-        $taskId = (new Task())->create([
-            'project_id' => (int) ($_POST['project_id'] ?? 0),
-            'title' => trim($_POST['title'] ?? ''),
-            'description' => trim($_POST['description'] ?? ''),
-            'priority' => $_POST['priority'] ?? 'medium',
-            'deadline' => $_POST['deadline'] ?? null,
-            'created_by' => Auth::user()['id'],
-            'expected_score' => (int) ($_POST['expected_score'] ?? 0),
+        $validator = \App\Core\Validator::make($_POST, [
+            'project_id' => 'required|positive_int',
+            'title' => 'required|string|min:2|max:255',
+            'description' => 'string',
+            'priority' => 'required|in:low,medium,high',
+            'deadline' => 'date',
+            'expected_score' => 'integer|min:0|max:100',
         ]);
+
+        if ($validator->fails()) {
+            \flash('danger', $validator->firstError());
+            \redirect('cong_viec/create');
+        }
+
+        $validated = $validator->validated();
+        $projectId = (int) $validated['project_id'];
+        $title = $validated['title'];
+
+        if (!(new Project())->userCanManageProject(Auth::user(), $projectId)) {
+            \flash('danger', 'Ban khong co quyen tao cong viec trong du an nay.');
+            \redirect('cong_viec/create');
+        }
+
+        try {
+            $taskId = (new Task())->create([
+                'project_id' => $projectId,
+                'title' => $title,
+                'description' => $validated['description'] ?? '',
+                'priority' => $validated['priority'],
+                'deadline' => $this->normalizeDateInput($validated['deadline'] ?? null),
+                'created_by' => Auth::user()['id'],
+                'expected_score' => (int) ($validated['expected_score'] ?? 0),
+            ]);
+        } catch (\Throwable $e) {
+            \flash('danger', 'Khong the tao cong viec: ' . $e->getMessage());
+            \redirect('cong_viec/create');
+        }
 
         (new Log())->create(Auth::user()['id'], 'create', 'task', $taskId, 'Tạo công việc');
         
@@ -105,11 +140,16 @@ class TaskController extends BaseController
      */
     public function assign(int $id): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         $taskModel = new Task();
         $projectModel = new Project();
 
         $task = $taskModel->find($id);
+        if (!$task || !$projectModel->userCanManageProject(Auth::user(), (int) $task['project_id'])) {
+            http_response_code(403);
+            exit('Ban khong co quyen phan cong cong viec nay.');
+        }
+
         $project = $projectModel->find((int) $task['project_id']);
         $members = $projectModel->members((int) $task['project_id']);
         $selectedAssigneeIds = array_map(static fn (array $item): int => (int) $item['id'], $taskModel->assignedUsers($id));
@@ -122,7 +162,7 @@ class TaskController extends BaseController
      */
     public function saveAssignment(int $id): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         if (!\is_post()) {
             \redirect('cong_viec/index');
         }
@@ -130,13 +170,29 @@ class TaskController extends BaseController
         $taskModel = new Task();
         $task = $taskModel->find($id);
         $projectModel = new Project();
-        $assigneeIds = array_map('intval', $_POST['assignee_ids'] ?? []);
 
         if (!$task) {
             \flash('danger', 'Không tìm thấy công việc cần phân công.');
             \redirect('cong_viec/index');
         }
 
+        if (!$projectModel->userCanManageProject(Auth::user(), (int) $task['project_id'])) {
+            \flash('danger', 'Ban khong co quyen phan cong cong viec nay.');
+            \redirect('cong_viec/show', ['id' => $id]);
+        }
+
+        $validator = \App\Core\Validator::make($_POST, [
+            'assignee_ids' => 'required|array_of_positive_int',
+            'start_date' => 'date',
+            'deadline' => 'date',
+        ]);
+
+        if ($validator->fails()) {
+            \flash('danger', $validator->firstError());
+            \redirect('cong_viec/assign', ['id' => $id]);
+        }
+
+        $assigneeIds = array_map('intval', $_POST['assignee_ids'] ?? []);
         $assigneeIds = array_values(array_unique(array_filter($assigneeIds, static fn (int $value): bool => $value > 0)));
         if (!$assigneeIds) {
             \flash('danger', 'Vui lòng chọn ít nhất một thành viên phụ trách.');
@@ -158,7 +214,18 @@ class TaskController extends BaseController
 
         if ($ok) {
             (new Log())->create(Auth::user()['id'], 'assign', 'task', $id, 'Điều chỉnh phân công công việc');
-            \flash('success', 'Lưu phân công thành công.');
+            if (!empty($_FILES['attachment']['name'])) {
+                try {
+                    $reason = trim($_POST['upload_reason'] ?? '');
+                    $this->storeE2EUploadedFile($id, $_FILES['attachment'], 'assignment_manager', $reason ?: null);
+                    (new Log())->create(Auth::user()['id'], 'upload', 'attachment', $id, 'Upload tài liệu khi phân công công việc');
+                    \flash('success', 'Lưu phân công và upload file thành công.');
+                } catch (\Throwable $e) {
+                    \flash('warning', 'Lưu phân công thành công nhưng upload file thất bại: ' . $e->getMessage());
+                }
+            } else {
+                \flash('success', 'Lưu phân công thành công.');
+            }
         } else {
             \flash('danger', 'Phân công công việc thất bại.');
         }
@@ -185,8 +252,19 @@ class TaskController extends BaseController
             \redirect('cong_viec/index');
         }
 
-        $status = $_POST['status'] ?? 'in_progress';
-        $note = trim($_POST['note'] ?? '');
+        $validator = \App\Core\Validator::make($_POST, [
+            'status' => 'required|in:new,assigned,in_progress,blocked,submitted,approved,redo',
+            'note' => 'string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            \flash('danger', $validator->firstError());
+            \redirect('cong_viec/show', ['id' => $id]);
+        }
+
+        $validated = $validator->validated();
+        $status = $validated['status'];
+        $note = $validated['note'] ?? '';
         $ok = $taskModel->updateStatus($id, $status, $note, (int) $user['id']);
 
         if ($ok) {
@@ -223,37 +301,11 @@ class TaskController extends BaseController
         }
 
         $file = $_FILES['attachment'];
-        if ((int) $file['size'] > MAX_UPLOAD_BYTES) {
-            \flash('danger', 'File vượt quá dung lượng cho phép (20MB).');
-            \redirect('cong_viec/show', ['id' => $id]);
-        }
-
-        $allowedExt = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'txt'];
-        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        if (!in_array($extension, $allowedExt, true)) {
-            \flash('danger', 'Định dạng file không được hỗ trợ. Chỉ hỗ trợ: pdf, doc, docx, xls, xlsx, png, jpg, jpeg, txt');
-            \redirect('cong_viec/show', ['id' => $id]);
-        }
 
         try {
-            $cryptoService = new FileCryptoService();
-            $stored = $cryptoService->hybridEncryptAndStore(
-                $file['tmp_name'],
-                $file['name'],
-                $cryptoService->getRsaPublicKey()
-            );
-
-            $ok = (new Attachment())->create([
-                'task_id' => $id,
-                'original_name' => $file['name'],
-                'stored_name' => $stored['stored_name'],
-                'mime_type' => $file['type'] ?: 'application/octet-stream',
-                'file_size' => (int) $file['size'],
-                'encrypted_path' => $stored['path'],
-                'uploaded_by' => $user['id'],
-                'encrypted_key' => $stored['key'],
-                'iv' => $stored['iv'],
-            ]);
+            $fileType = ($user['role'] === 'employee') ? 'employee' : 'manager';
+            $reason = trim($_POST['upload_reason'] ?? '');
+            $ok = $this->storeE2EUploadedFile($id, $file, $fileType, $reason ?: null);
 
             if ($ok) {
                 (new Log())->create($user['id'], 'upload', 'attachment', $id, 'Upload file công việc');
@@ -273,8 +325,13 @@ class TaskController extends BaseController
      */
     public function review(int $id): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         $task = (new Task())->find($id);
+        if (!$task || !(new Project())->userCanManageProject(Auth::user(), (int) $task['project_id'])) {
+            http_response_code(403);
+            exit('Ban khong co quyen duyet cong viec nay.');
+        }
+
         $tep_dinh_kem = (new Attachment())->byTask($id);
         $this->render('cong_viec/review', compact('task', 'tep_dinh_kem'), 'Duyệt và đánh giá');
     }
@@ -285,14 +342,32 @@ class TaskController extends BaseController
      */
     public function saveReview(int $id): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         if (!\is_post()) {
             \redirect('cong_viec/show', ['id' => $id]);
         }
 
-        $status = $_POST['review_status'] ?? 'approved';
-        $comment = trim($_POST['review_comment'] ?? '');
-        $score = (int) ($_POST['review_score'] ?? 0);
+        $task = (new Task())->find($id);
+        if (!$task || !(new Project())->userCanManageProject(Auth::user(), (int) $task['project_id'])) {
+            \flash('danger', 'Ban khong co quyen duyet cong viec nay.');
+            \redirect('cong_viec/show', ['id' => $id]);
+        }
+
+        $validator = \App\Core\Validator::make($_POST, [
+            'review_status' => 'required|in:approved,redo',
+            'review_score' => 'integer|min:0|max:100',
+            'review_comment' => 'string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            \flash('danger', $validator->firstError());
+            \redirect('cong_viec/review', ['id' => $id]);
+        }
+
+        $validated = $validator->validated();
+        $status = $validated['review_status'];
+        $comment = $validated['review_comment'] ?? '';
+        $score = isset($validated['review_score']) ? (int) $validated['review_score'] : 0;
 
         $ok = (new Task())->review($id, $status, $comment, $score, (int) Auth::user()['id']);
 
@@ -325,45 +400,8 @@ class TaskController extends BaseController
         }
 
         try {
-            // Kiểm tra kích thước file
-            if ((int) $file['size'] > MAX_UPLOAD_BYTES) {
-                \flash('warning', 'File manager vượt quá 5MB, bỏ qua upload.');
-                return;
-            }
-
-            // Kiểm tra định dạng file
-            $allowedExt = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'txt'];
-            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            if (!in_array($extension, $allowedExt, true)) {
-                \flash('warning', 'Định dạng file manager không được hỗ trợ, bỏ qua upload.');
-                return;
-            }
-
-            // Mã hóa file
-            $cryptoService = new FileCryptoService();
-            $stored = $cryptoService->hybridEncryptAndStore(
-                $file['tmp_name'],
-                $file['name'],
-                $cryptoService->getRsaPublicKey()
-            );
-
-            // Lưu metadata
-            $attachmentModel = new Attachment();
             $reason = trim($_POST['upload_reason'] ?? '');
-            
-            $ok = $attachmentModel->create([
-                'task_id' => $taskId,
-                'original_name' => $file['name'],
-                'stored_name' => $stored['stored_name'],
-                'mime_type' => $file['type'] ?: 'application/octet-stream',
-                'file_size' => (int) $file['size'],
-                'encrypted_path' => $stored['path'],
-                'uploaded_by' => $user['id'],
-                'file_type' => 'manager',
-                'upload_reason' => $reason ?: null,
-                'encrypted_key' => $stored['key'],
-                'iv' => $stored['iv'],
-            ]);
+            $ok = $this->storeE2EUploadedFile($taskId, $file, 'manager', $reason ?: null);
 
             if ($ok) {
                 (new Log())->create($user['id'], 'upload', 'attachment', $taskId, "Upload file hướng dẫn (Manager): $reason");
@@ -381,7 +419,7 @@ class TaskController extends BaseController
      */
     public function destroy(int $id): void
     {
-        $this->requireRole(['manager', 'admin']);
+        $this->requireLogin();
         if (!\is_post()) {
             \redirect('cong_viec/index');
         }
@@ -422,45 +460,8 @@ class TaskController extends BaseController
         }
 
         try {
-            // Kiểm tra kích thước file (20MB cho manager upload)
-            if ((int) $file['size'] > MAX_UPLOAD_BYTES) {
-                \flash('warning', 'File vượt quá 20MB, bỏ qua upload.');
-                return;
-            }
-
-            // Kiểm tra định dạng file
-            $allowedExt = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'txt'];
-            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            if (!in_array($extension, $allowedExt, true)) {
-                \flash('warning', 'Định dạng file không được hỗ trợ, bỏ qua upload.');
-                return;
-            }
-
-            // Mã hóa file
-            $cryptoService = new FileCryptoService();
-            $stored = $cryptoService->hybridEncryptAndStore(
-                $file['tmp_name'],
-                $file['name'],
-                $cryptoService->getRsaPublicKey()
-            );
-
-            // Lưu metadata
-            $attachmentModel = new Attachment();
             $reason = trim($_POST['upload_reason'] ?? '');
-            
-            $ok = $attachmentModel->create([
-                'task_id' => $taskId,
-                'original_name' => $file['name'],
-                'stored_name' => $stored['stored_name'],
-                'mime_type' => $file['type'] ?: 'application/octet-stream',
-                'file_size' => (int) $file['size'],
-                'encrypted_path' => $stored['path'],
-                'uploaded_by' => $user['id'],
-                'file_type' => 'project_manager',
-                'upload_reason' => $reason ?: null,
-                'encrypted_key' => $stored['key'],
-                'iv' => $stored['iv'],
-            ]);
+            $ok = $this->storeE2EUploadedFile($taskId, $file, 'project_manager', $reason ?: null);
 
             if ($ok) {
                 (new Log())->create($user['id'], 'upload', 'attachment', $taskId, "Upload file khi tạo công việc: $reason");
@@ -471,5 +472,29 @@ class TaskController extends BaseController
         } catch (\Throwable $e) {
             \flash('warning', 'Upload file thất bại: ' . $e->getMessage());
         }
+    }
+
+    private function storeE2EUploadedFile(int $taskId, array $file, string $fileType, ?string $reason): int|false
+    {
+        return (new AttachmentModuleService())->storeE2EUpload($file, [
+            'task_id' => $taskId,
+            'project_id' => null,
+            'module_name' => 'cong_viec',
+            'uploaded_by' => Auth::user()['id'],
+            'file_type' => $fileType,
+            'upload_reason' => $reason,
+            'encrypted_key' => null,
+        ]);
+    }
+
+    private function normalizeDateInput(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $timestamp = strtotime($value);
+        return $timestamp === false ? $value : date('Y-m-d', $timestamp);
     }
 }

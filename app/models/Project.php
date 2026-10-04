@@ -222,4 +222,35 @@ class Project extends BaseModel
         $stmt->execute(['project_id' => $projectId, 'user_id' => $userId]);
         return (int) $stmt->fetchColumn() > 0;
     }
+
+    public function userIsProjectLead(int $projectId, int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*)
+             FROM thanh_vien_du_an
+             WHERE project_id = :project_id
+               AND user_id = :user_id
+               AND project_role = 'lead'"
+        );
+        $stmt->execute(['project_id' => $projectId, 'user_id' => $userId]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    public function userCanManageProject(array $user, int $projectId): bool
+    {
+        if (($user['role'] ?? '') === 'admin') {
+            return true;
+        }
+
+        $project = $this->find($projectId);
+        if (!$project) {
+            return false;
+        }
+
+        if ((int) $project['created_by'] === (int) $user['id']) {
+            return true;
+        }
+
+        return $this->userIsProjectLead($projectId, (int) $user['id']);
+    }
 }

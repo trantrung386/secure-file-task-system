@@ -59,13 +59,14 @@
                     <div id="project_date_error" class="alert alert-danger border-0 shadow-sm d-none mb-0">Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.</div>
                 </div>
 
+                <?php if ($isEdit): ?>
                 <div class="col-12">
                     <hr>
                     <h5 class="mb-3">📤 Upload file tài liệu dự án (Tuỳ chọn)</h5>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Chọn file</label>
-                            <input type="file" class="form-control" id="project_attachment" name="project_attachment">
+                            <input type="file" class="form-control" id="project_attachment" name="project_attachment" data-e2e-file <?= $isEdit ? 'data-recipient-url="' . e(route_url('crypto/projectRecipients', ['id' => $project['id']])) . '"' : '' ?>>
                             <div id="project_error" class="alert alert-danger alert-sm mt-2 d-none"></div>
                             <div class="small text-secondary mt-2">
                                 File sẽ được mã hóa. Hỗ trợ: pdf, doc, docx, xls, xlsx, png, jpg, jpeg, txt. Max 20MB.
@@ -77,11 +78,13 @@
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
             <div class="mt-4 d-flex gap-2">
                 <button class="btn btn-primary" id="project_submit_btn"><?= $isEdit ? 'Lưu cập nhật' : 'Tạo dự án' ?></button>
                 <a class="btn btn-outline-secondary" href="<?= e(route_url('du_an/index')) ?>">Hủy</a>
             </div>
+            <div class="alert alert-info mt-3 d-none" data-e2e-status></div>
         </form>
     </div>
 </div>

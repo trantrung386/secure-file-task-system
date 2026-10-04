@@ -12,7 +12,7 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Dự án</label>
-                    <select class="form-select" name="project_id" required>
+                    <select class="form-select" name="project_id" id="task_project_id" required>
                         <option value="">-- Chọn dự án --</option>
                         <?php foreach ($du_an as $project): ?>
                             <option value="<?= e((string) $project['id']) ?>"><?= e($project['name']) ?></option>
@@ -51,7 +51,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Chọn file</label>
-                            <input type="file" class="form-control" id="task_attachment" name="task_attachment">
+                            <input type="file" class="form-control" id="task_attachment" name="task_attachment" data-e2e-file data-e2e-optional="true" data-project-select="#task_project_id">
                             <div id="task_error" class="alert alert-danger alert-sm mt-2" style="display: none;"></div>
                             <div class="small text-secondary mt-2">
                                 File sẽ được mã hóa. Hỗ trợ: pdf, doc, docx, xls, xlsx, png, jpg, jpeg, txt. Max 20MB.
@@ -68,6 +68,7 @@
                 <button class="btn btn-primary" id="task_submit_btn">Lưu công việc</button>
                 <a class="btn btn-outline-secondary" href="<?= e(route_url('cong_viec/index')) ?>">Hủy</a>
             </div>
+            <div class="alert alert-info mt-3 d-none" data-e2e-status></div>
         </form>
     </div>
 </div>

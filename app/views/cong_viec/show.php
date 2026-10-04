@@ -77,13 +77,26 @@ if (($task['status'] ?? '') === 'blocked') {
                     </form>
                 </div>
             </div>
+        <?php endif; ?>
 
-            <div class="card border-0 shadow-sm">
+        <?php
+        $canUploadTaskFile = $taskAccessModel->canAccess(current_user(), (int) $task['id']);
+        ?>
+        <?php if ($canUploadTaskFile): ?>
+            <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
-                    <h2 class="h5 mb-3">Upload file kết quả</h2>
+                    <h2 class="h5 mb-3">Upload file đính kèm / kết quả</h2>
                     <form method="post" enctype="multipart/form-data" action="<?= e(route_url('cong_viec/upload', ['id' => $task['id']])) ?>">
-                        <input type="file" class="form-control" name="attachment" required>
-                        <div class="small text-secondary mt-2">Tải file kết quả để quản lý kiểm tra và duyệt công việc.</div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Chọn file</label>
+                            <input type="file" class="form-control" name="attachment" data-e2e-file data-recipient-url="<?= e(route_url('crypto/taskRecipients', ['id' => $task['id']])) ?>" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Ghi chú file (tùy chọn)</label>
+                            <input type="text" class="form-control" name="upload_reason" placeholder="Mô tả file kết quả hoặc tài liệu bổ sung">
+                        </div>
+                        <div class="small text-secondary mt-1">File sẽ được mã hóa E2E trước khi lưu vào CSDL. Hỗ trợ: pdf, doc, docx, xls, xlsx, png, jpg, jpeg, txt (max 20MB).</div>
+                        <div class="alert alert-info mt-3 d-none" data-e2e-status></div>
                         <button class="btn btn-dark mt-3">Upload và mã hóa file</button>
                     </form>
                 </div>
@@ -123,21 +136,15 @@ if (($task['status'] ?? '') === 'blocked') {
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header">📎 File đính kèm</div>
             <div class="card-body">
-                <?php 
+                <?php
                 $userRole = current_user()['role'];
                 $isAssignee = $taskAccessModel->isUserAssigned((int) $task['id'], (int) current_user()['id']);
-                $canAccessTask = $taskAccessModel->canAccess(current_user(), (int) $task['id']);
+                $canManageTaskProject = (new \App\Models\Project())->userCanManageProject(current_user(), (int) $task['project_id']);
+                $canViewTaskFile = ($userRole === 'admin') || $isAssignee || $canManageTaskProject;
                 ?>
-                
+
                 <?php foreach ($tep_dinh_kem as $file): ?>
-                    <?php
-                    $canViewManagerFile = ($file['file_type'] === 'manager') && 
-                        in_array($userRole, ['manager', 'admin'], true);
-                    
-                    $canViewProjectManagerFile = ($file['file_type'] === 'project_manager') && $canAccessTask;
-                    
-                    if ($file['file_type'] === 'employee' || $canViewManagerFile || $canViewProjectManagerFile):
-                    ?>
+                    <?php if ($canViewTaskFile): ?>
                         <div class="border rounded-4 p-3 mb-3">
                             <div class="d-flex align-items-start justify-content-between">
                                 <div class="flex-grow-1">
@@ -151,12 +158,12 @@ if (($task['status'] ?? '') === 'blocked') {
                                             <span class="badge text-bg-success ms-2">Nộp từ Employee</span>
                                         <?php endif; ?>
                                     </div>
-                                    
+
                                     <div class="small text-secondary mb-2 mt-1">
-                                        Tải lên bởi <strong><?= e($file['uploader_name']) ?></strong> 
+                                        Tải lên bởi <strong><?= e($file['uploader_name']) ?></strong>
                                         • <?= e(format_datetime($file['created_at'])) ?>
                                     </div>
-                                    
+
                                     <?php if (($file['file_type'] === 'manager' || $file['file_type'] === 'project_manager') && $file['upload_reason']): ?>
                                         <div class="small text-muted">
                                             📝 <em><?= e($file['upload_reason']) ?></em>
@@ -170,7 +177,7 @@ if (($task['status'] ?? '') === 'blocked') {
                         </div>
                     <?php endif; ?>
                 <?php endforeach; ?>
-                
+
                 <?php if (!$tep_dinh_kem): ?>
                     <div class="text-muted">Chưa có file đính kèm.</div>
                 <?php endif; ?>
