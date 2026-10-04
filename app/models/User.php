@@ -15,11 +15,35 @@ class User extends BaseModel
     }
 
     /**
-     * Lấy toàn bộ tài khoản để Admin quản lý.
+     * Lấy danh sách tài khoản có hỗ trợ tìm kiếm và lọc an toàn.
      */
-    public function all(): array
+    public function all(?string $keyword = null, ?string $role = null): array
     {
-        return $this->db->query('SELECT * FROM tai_khoan ORDER BY created_at DESC, id DESC')->fetchAll();
+        $conditions = [];
+        $params = [];
+
+        if ($keyword !== null && trim($keyword) !== '') {
+            $conditions[] = '(name LIKE :kw_name OR email LIKE :kw_email OR department LIKE :kw_dept)';
+            $kwVal = '%' . trim($keyword) . '%';
+            $params['kw_name'] = $kwVal;
+            $params['kw_email'] = $kwVal;
+            $params['kw_dept'] = $kwVal;
+        }
+
+        if ($role !== null && trim($role) !== '') {
+            $conditions[] = 'role = :role';
+            $params['role'] = trim($role);
+        }
+
+        $sql = 'SELECT * FROM tai_khoan';
+        if ($conditions) {
+            $sql .= ' WHERE ' . implode(' AND ', $conditions);
+        }
+        $sql .= ' ORDER BY created_at DESC, id DESC';
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     }
 
     /**

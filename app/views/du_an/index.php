@@ -8,6 +8,22 @@
     <?php endif; ?>
 </div>
 
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form class="row g-3" method="get">
+            <input type="hidden" name="route" value="du_an/index">
+            <div class="col-md-9">
+                <label class="form-label fw-semibold">Tìm kiếm dự án</label>
+                <input type="text" class="form-control" name="keyword" placeholder="Nhập mã dự án, tên hoặc mô tả dự án..." value="<?= e($keyword ?? '') ?>">
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button class="btn btn-outline-primary flex-grow-1" type="submit">Tìm kiếm</button>
+                <a class="btn btn-outline-secondary" href="<?= e(route_url('du_an/index')) ?>">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm">
     <div class="card-body table-responsive">
         <?php $projectAccessModel = new \App\Models\Project(); ?>

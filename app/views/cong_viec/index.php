@@ -23,6 +23,10 @@
         <form class="row g-3">
             <input type="hidden" name="route" value="cong_viec/index">
             <div class="col-md-4">
+                <label class="form-label fw-semibold">Từ khóa tìm kiếm</label>
+                <input type="text" class="form-control" name="keyword" placeholder="Nhập tên hoặc mô tả công việc..." value="<?= e($filters['keyword'] ?? '') ?>">
+            </div>
+            <div class="col-md-3">
                 <label class="form-label fw-semibold">Lọc theo dự án</label>
                 <select class="form-select" name="project_id">
                     <option value="">Tất cả dự án</option>
@@ -31,7 +35,7 @@
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label fw-semibold">Lọc theo trạng thái</label>
                 <select class="form-select" name="status">
                     <?php foreach (['' => 'Tất cả trạng thái', 'new' => 'Mới tạo', 'assigned' => 'Đã phân công', 'in_progress' => 'Đang thực hiện', 'blocked' => 'Bị chặn', 'submitted' => 'Chờ duyệt', 'approved' => 'Đã duyệt', 'redo' => 'Yêu cầu làm lại'] as $value => $label): ?>
@@ -39,8 +43,8 @@
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-4 d-flex align-items-end gap-2">
-                <button class="btn btn-outline-primary">Áp dụng bộ lọc</button>
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                <button class="btn btn-outline-primary flex-grow-1" type="submit">Tìm</button>
                 <a class="btn btn-outline-secondary" href="<?= e(route_url('cong_viec/index')) ?>">Reset</a>
             </div>
         </form>

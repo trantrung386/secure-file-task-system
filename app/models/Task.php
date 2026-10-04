@@ -35,6 +35,12 @@ class Task extends BaseModel
             $params['project_id'] = (int) $filters['project_id'];
         }
 
+        if (!empty($filters['keyword'])) {
+            $conditions[] = '(t.title LIKE :kw_title OR t.description LIKE :kw_desc)';
+            $params['kw_title'] = '%' . $filters['keyword'] . '%';
+            $params['kw_desc'] = '%' . $filters['keyword'] . '%';
+        }
+
         if ($user['role'] === 'employee') {
             $conditions[] = '(t.assignee_id = :uid OR EXISTS (
                 SELECT 1 FROM cong_viec_phu_trach cpt WHERE cpt.task_id = t.id AND cpt.user_id = :uid

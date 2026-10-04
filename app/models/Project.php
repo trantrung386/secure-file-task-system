@@ -11,46 +11,71 @@ class Project extends BaseModel
     /**
      * Lấy danh sách dự án theo vai trò người dùng.
      */
-    public function forUser(array $user): array
+    public function forUser(array $user, ?string $keyword = null): array
     {
+        $hasKw = ($keyword !== null && trim($keyword) !== '');
+        $kw = '%' . trim((string) $keyword) . '%';
+
         if ($user['role'] === 'admin') {
-            return $this->all();
+            return $this->all($keyword);
         }
 
         if ($user['role'] === 'manager') {
-            $stmt = $this->db->prepare(
-                'SELECT DISTINCT p.*, u.name AS creator_name
+            $sql = 'SELECT DISTINCT p.*, u.name AS creator_name
                  FROM du_an p
                  LEFT JOIN tai_khoan u ON u.id = p.created_by
                  LEFT JOIN thanh_vien_du_an pm ON pm.project_id = p.id
-                 WHERE p.created_by = :uid OR pm.user_id = :uid
-                 ORDER BY p.created_at DESC'
-            );
-            $stmt->execute(['uid' => $user['id']]);
+                 WHERE (p.created_by = :uid OR pm.user_id = :uid)';
+            $params = ['uid' => $user['id']];
+            if ($hasKw) {
+                $sql .= ' AND (p.code LIKE :kw_code OR p.name LIKE :kw_name OR p.description LIKE :kw_desc)';
+                $params['kw_code'] = $kw;
+                $params['kw_name'] = $kw;
+                $params['kw_desc'] = $kw;
+            }
+            $sql .= ' ORDER BY p.created_at DESC';
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
             return $stmt->fetchAll();
         }
 
-        $stmt = $this->db->prepare(
-            'SELECT p.*, u.name AS creator_name
+        $sql = 'SELECT p.*, u.name AS creator_name
              FROM du_an p
              INNER JOIN thanh_vien_du_an pm ON pm.project_id = p.id AND pm.user_id = :uid
-             LEFT JOIN tai_khoan u ON u.id = p.created_by
-             ORDER BY p.created_at DESC'
-        );
-        $stmt->execute(['uid' => $user['id']]);
+             LEFT JOIN tai_khoan u ON u.id = p.created_by';
+        $params = ['uid' => $user['id']];
+        if ($hasKw) {
+            $sql .= ' WHERE (p.code LIKE :kw_code OR p.name LIKE :kw_name OR p.description LIKE :kw_desc)';
+            $params['kw_code'] = $kw;
+            $params['kw_name'] = $kw;
+            $params['kw_desc'] = $kw;
+        }
+        $sql .= ' ORDER BY p.created_at DESC';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
     /**
      * Lấy toàn bộ dự án.
      */
-    public function all(): array
+    public function all(?string $keyword = null): array
     {
         $sql = 'SELECT p.*, u.name AS creator_name
                 FROM du_an p
-                LEFT JOIN tai_khoan u ON u.id = p.created_by
-                ORDER BY p.created_at DESC';
-        return $this->db->query($sql)->fetchAll();
+                LEFT JOIN tai_khoan u ON u.id = p.created_by';
+        $params = [];
+        if ($keyword !== null && trim($keyword) !== '') {
+            $sql .= ' WHERE (p.code LIKE :kw_code OR p.name LIKE :kw_name OR p.description LIKE :kw_desc)';
+            $kwVal = '%' . trim($keyword) . '%';
+            $params['kw_code'] = $kwVal;
+            $params['kw_name'] = $kwVal;
+            $params['kw_desc'] = $kwVal;
+        }
+        $sql .= ' ORDER BY p.created_at DESC';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     }
 
     /**

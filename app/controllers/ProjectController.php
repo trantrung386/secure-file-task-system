@@ -18,8 +18,17 @@ class ProjectController extends BaseController
     public function index(): void
     {
         $this->requireLogin();
-        $du_an = (new Project())->forUser(Auth::user());
-        $this->render('du_an/index', ['du_an' => $du_an], 'Quản lý dự án');
+        $rawKeyword = trim((string) ($_GET['keyword'] ?? ''));
+        $cleanKeyword = \App\Core\Validator::sanitizeString($rawKeyword);
+        if (mb_strlen($cleanKeyword, 'UTF-8') > 100) {
+            $cleanKeyword = mb_substr($cleanKeyword, 0, 100, 'UTF-8');
+        }
+
+        $du_an = (new Project())->forUser(Auth::user(), $cleanKeyword !== '' ? $cleanKeyword : null);
+        $this->render('du_an/index', [
+            'du_an' => $du_an,
+            'keyword' => $cleanKeyword,
+        ], 'Quản lý dự án');
     }
 
     /**

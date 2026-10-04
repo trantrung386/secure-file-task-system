@@ -66,10 +66,16 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
     </main>
 <?php else: ?>
     <div class="app-shell">
+        <div class="sidebar-backdrop" data-sidebar-close></div>
         <aside class="sidebar shadow-sm">
-            <div class="sidebar-brand">
-                <div class="brand-icon">TTW</div>
-                <div class="brand-title">TruTo Work</div>
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <div class="brand-icon">TTW</div>
+                    <div class="brand-title">TruTo Work</div>
+                </div>
+                <button type="button" class="sidebar-close-btn d-lg-none" data-sidebar-close aria-label="Đóng menu">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
 
             <nav class="sidebar-menu">
@@ -112,11 +118,14 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
                 </div>
                 <div class="topbar-user">
                     <div class="avatar-badge"><?= e(strtoupper(substr($authUser['name'], 0, 1))) ?></div>
-                    <div>
-                        <div class="fw-semibold"><?= e($authUser['name']) ?></div>
+                    <div class="d-none d-sm-block">
+                        <div class="fw-semibold text-truncate" style="max-width: 140px;"><?= e($authUser['name']) ?></div>
                         <div class="small text-secondary"><?= e(role_label($authUser['role'])) ?></div>
                     </div>
-                    <a class="btn btn-outline-secondary btn-sm" href="<?= e(route_url('auth/logout')) ?>">Đăng xuất</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="<?= e(route_url('auth/logout')) ?>" title="Đăng xuất">
+                        <span class="d-none d-md-inline">Đăng xuất</span>
+                        <span class="d-md-none">Thoát</span>
+                    </a>
                 </div>
             </header>
 
@@ -138,28 +147,57 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
     (() => {
         const appShell = document.querySelector('.app-shell');
         const toggle = document.querySelector('[data-sidebar-toggle]');
-        if (!appShell || !toggle) return;
+        const closeBtns = document.querySelectorAll('[data-sidebar-close]');
+        if (!appShell) return;
 
         const syncToggle = () => {
+            if (!toggle) return;
             const expanded = !appShell.classList.contains('sidebar-collapsed') && !appShell.classList.contains('sidebar-open');
             toggle.setAttribute('aria-expanded', String(expanded));
         };
 
-        toggle.addEventListener('click', () => {
-            if (window.matchMedia('(max-width: 991.98px)').matches) {
-                appShell.classList.toggle('sidebar-open');
-            } else {
-                appShell.classList.toggle('sidebar-collapsed');
-                localStorage.setItem('ttw:sidebar-collapsed', appShell.classList.contains('sidebar-collapsed') ? '1' : '0');
+        if (toggle) {
+            toggle.addEventListener('click', () => {
+                if (window.matchMedia('(max-width: 991.98px)').matches) {
+                    appShell.classList.toggle('sidebar-open');
+                } else {
+                    appShell.classList.toggle('sidebar-collapsed');
+                    localStorage.setItem('ttw:sidebar-collapsed', appShell.classList.contains('sidebar-collapsed') ? '1' : '0');
+                }
+                syncToggle();
+            });
+        }
+
+        closeBtns.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                appShell.classList.remove('sidebar-open');
+                syncToggle();
+            });
+        });
+
+        document.querySelectorAll('.sidebar-menu .menu-link').forEach((link) => {
+            link.addEventListener('click', () => {
+                if (window.matchMedia('(max-width: 991.98px)').matches) {
+                    appShell.classList.remove('sidebar-open');
+                    syncToggle();
+                }
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && appShell.classList.contains('sidebar-open')) {
+                appShell.classList.remove('sidebar-open');
+                syncToggle();
             }
-            syncToggle();
         });
 
         if (localStorage.getItem('ttw:sidebar-collapsed') === '1' && !window.matchMedia('(max-width: 991.98px)').matches) {
             appShell.classList.add('sidebar-collapsed');
         }
         window.addEventListener('resize', () => {
-            appShell.classList.remove('sidebar-open');
+            if (!window.matchMedia('(max-width: 991.98px)').matches) {
+                appShell.classList.remove('sidebar-open');
+            }
             syncToggle();
         });
         syncToggle();

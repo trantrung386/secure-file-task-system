@@ -26,14 +26,20 @@ class TaskController extends BaseController
 
         $rawStatus = (string) ($_GET['status'] ?? '');
         $rawProjectId = $_GET['project_id'] ?? '';
+        $rawKeyword = trim((string) ($_GET['keyword'] ?? ''));
 
         $statusAllowed = ['new', 'assigned', 'in_progress', 'blocked', 'submitted', 'approved', 'redo'];
         $cleanStatus = in_array($rawStatus, $statusAllowed, true) ? $rawStatus : '';
         $cleanProjectId = \App\Core\Validator::validateId($rawProjectId);
+        $cleanKeyword = \App\Core\Validator::sanitizeString($rawKeyword);
+        if (mb_strlen($cleanKeyword, 'UTF-8') > 100) {
+            $cleanKeyword = mb_substr($cleanKeyword, 0, 100, 'UTF-8');
+        }
 
         $filters = [
             'status' => $cleanStatus,
             'project_id' => $cleanProjectId !== null ? (string) $cleanProjectId : '',
+            'keyword' => $cleanKeyword,
         ];
 
         $taskModel = new Task();

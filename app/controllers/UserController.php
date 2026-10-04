@@ -19,8 +19,27 @@ class UserController extends BaseController
     public function index(): void
     {
         $this->requireRole(['admin']);
-        $tai_khoan = (new User())->all();
-        $this->render('tai_khoan/index', ['tai_khoan' => $tai_khoan], 'Quản lý tài khoản');
+        $rawKeyword = trim((string) ($_GET['keyword'] ?? ''));
+        $rawRole = trim((string) ($_GET['role'] ?? ''));
+
+        $cleanKeyword = \App\Core\Validator::sanitizeString($rawKeyword);
+        if (mb_strlen($cleanKeyword, 'UTF-8') > 100) {
+            $cleanKeyword = mb_substr($cleanKeyword, 0, 100, 'UTF-8');
+        }
+
+        $allowedRoles = ['admin', 'manager', 'employee'];
+        $cleanRole = in_array($rawRole, $allowedRoles, true) ? $rawRole : '';
+
+        $tai_khoan = (new User())->all(
+            $cleanKeyword !== '' ? $cleanKeyword : null,
+            $cleanRole !== '' ? $cleanRole : null
+        );
+
+        $this->render('tai_khoan/index', [
+            'tai_khoan' => $tai_khoan,
+            'keyword' => $cleanKeyword,
+            'role' => $cleanRole,
+        ], 'Quản lý tài khoản');
     }
 
     /**

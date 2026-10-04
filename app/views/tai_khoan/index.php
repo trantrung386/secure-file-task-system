@@ -6,6 +6,31 @@
     <a href="<?= e(route_url('tai_khoan/create')) ?>" class="btn btn-primary">+ Tạo tài khoản</a>
 </div>
 
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form class="row g-3" method="get">
+            <input type="hidden" name="route" value="tai_khoan/index">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Tìm kiếm tài khoản</label>
+                <input type="text" class="form-control" name="keyword" placeholder="Nhập họ tên, email hoặc phòng ban..." value="<?= e($keyword ?? '') ?>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Lọc theo vai trò</label>
+                <select class="form-select" name="role">
+                    <option value="">Tất cả vai trò</option>
+                    <option value="admin" <?= (($role ?? '') === 'admin') ? 'selected' : '' ?>>Admin</option>
+                    <option value="manager" <?= (($role ?? '') === 'manager') ? 'selected' : '' ?>>Trưởng nhóm</option>
+                    <option value="employee" <?= (($role ?? '') === 'employee') ? 'selected' : '' ?>>Nhân viên</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button class="btn btn-outline-primary flex-grow-1" type="submit">Tìm kiếm</button>
+                <a class="btn btn-outline-secondary" href="<?= e(route_url('tai_khoan/index')) ?>">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm">
     <div class="card-body table-responsive">
         <table class="table align-middle">

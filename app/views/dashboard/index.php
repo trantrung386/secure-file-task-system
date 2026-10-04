@@ -7,25 +7,25 @@
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="metric-box h-100">
             <div class="metric-label">Tổng công việc</div>
             <div class="metric-value"><?= e((string) $stats['total']) ?></div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="metric-box h-100">
             <div class="metric-label">Đã duyệt</div>
             <div class="metric-value text-success"><?= e((string) $stats['approved']) ?></div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="metric-box h-100">
             <div class="metric-label">Chờ duyệt</div>
             <div class="metric-value text-dark"><?= e((string) $stats['submitted']) ?></div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="metric-box h-100">
             <div class="metric-label">Quá hạn</div>
             <div class="metric-value text-danger"><?= e((string) $stats['overdue']) ?></div>
