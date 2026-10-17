@@ -10,6 +10,11 @@ require dirname(__DIR__) . '/app/bootstrap.php';
 
 header('Content-Type: text/html; charset=UTF-8');
 
+$requestMethod = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+if (!in_array($requestMethod, ['GET', 'HEAD', 'OPTIONS'], true)) {
+    \App\Core\Csrf::requireValid();
+}
+
 $route = $_GET['route'] ?? (current_user() ? 'dashboard/index' : 'home/index');
 $route = trim($route, '/');
 $parts = array_values(array_filter(explode('/', $route)));

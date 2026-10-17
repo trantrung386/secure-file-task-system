@@ -43,4 +43,12 @@ abstract class BaseController
     {
         Auth::requireRole($roles);
     }
+
+    /**
+     * Kiểm tra chống CSRF mức Medium (xác minh HTTP Referer / Origin khớp với máy chủ).
+     */
+    protected function requirePostCsrf(): void
+    {
+        Csrf::requireValid();
+    }
 }

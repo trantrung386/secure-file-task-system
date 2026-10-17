@@ -88,9 +88,7 @@ class TaskController extends BaseController
     public function store(): void
     {
         $this->requireLogin();
-        if (!\is_post()) {
-            \redirect('cong_viec/index');
-        }
+        $this->requirePostCsrf();
 
         $validator = \App\Core\Validator::make($_POST, [
             'project_id' => 'required|positive_int',
@@ -169,9 +167,7 @@ class TaskController extends BaseController
     public function saveAssignment(int $id): void
     {
         $this->requireLogin();
-        if (!\is_post()) {
-            \redirect('cong_viec/index');
-        }
+        $this->requirePostCsrf();
 
         $taskModel = new Task();
         $task = $taskModel->find($id);
@@ -245,9 +241,7 @@ class TaskController extends BaseController
     public function updateStatus(int $id): void
     {
         $this->requireLogin();
-        if (!\is_post()) {
-            \redirect('cong_viec/show', ['id' => $id]);
-        }
+        $this->requirePostCsrf();
 
         $user = Auth::user();
         $taskModel = new Task();
@@ -289,9 +283,7 @@ class TaskController extends BaseController
     public function upload(int $id): void
     {
         $this->requireLogin();
-        if (!\is_post()) {
-            \redirect('cong_viec/show', ['id' => $id]);
-        }
+        $this->requirePostCsrf();
 
         $user = Auth::user();
         $taskModel = new Task();
@@ -349,9 +341,7 @@ class TaskController extends BaseController
     public function saveReview(int $id): void
     {
         $this->requireLogin();
-        if (!\is_post()) {
-            \redirect('cong_viec/show', ['id' => $id]);
-        }
+        $this->requirePostCsrf();
 
         $task = (new Task())->find($id);
         if (!$task || !(new Project())->userCanManageProject(Auth::user(), (int) $task['project_id'])) {
@@ -426,9 +416,7 @@ class TaskController extends BaseController
     public function destroy(int $id): void
     {
         $this->requireLogin();
-        if (!\is_post()) {
-            \redirect('cong_viec/index');
-        }
+        $this->requirePostCsrf();
 
         $taskModel = new Task();
         $task = $taskModel->find($id);

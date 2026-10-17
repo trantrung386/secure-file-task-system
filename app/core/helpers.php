@@ -86,6 +86,14 @@ function is_post(): bool
 }
 
 /**
+ * Kiểm tra chống CSRF mức Medium (xác minh HTTP Referer / Origin khớp với tên máy chủ).
+ */
+function verify_csrf(): void
+{
+    \App\Core\Csrf::requireValid();
+}
+
+/**
  * Đổi trạng thái kỹ thuật sang text tiếng Việt dễ nhìn hơn ở giao diện.
  */
 function status_label(string $status): string

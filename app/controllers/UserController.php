@@ -57,9 +57,7 @@ class UserController extends BaseController
     public function store(): void
     {
         $this->requireRole(['admin']);
-        if (!\is_post()) {
-            \redirect('tai_khoan/index');
-        }
+        $this->requirePostCsrf();
 
         $validator = \App\Core\Validator::make($_POST, [
             'name' => 'required|string|min:2|max:100',
@@ -123,9 +121,7 @@ class UserController extends BaseController
     public function update(int $id): void
     {
         $this->requireRole(['admin']);
-        if (!\is_post()) {
-            \redirect('tai_khoan/index');
-        }
+        $this->requirePostCsrf();
 
         $userModel = new User();
         $user = $userModel->find($id);
@@ -187,6 +183,8 @@ class UserController extends BaseController
     public function toggle(int $id): void
     {
         $this->requireRole(['admin']);
+        $this->requirePostCsrf();
+
         $ok = (new User())->toggleStatus($id);
 
         if ($ok) {
@@ -205,6 +203,8 @@ class UserController extends BaseController
     public function delete(int $id): void
     {
         $this->requireRole(['admin']);
+        $this->requirePostCsrf();
+
         if ((int) Auth::user()['id'] === (int) $id) {
             \flash('danger', 'Không thể xóa chính tài khoản Admin đang đăng nhập.');
             \redirect('tai_khoan/index');

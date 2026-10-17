@@ -14,6 +14,7 @@ class CryptoController extends BaseController
     public function savePublicKey(): void
     {
         $this->requireLogin();
+        $this->requirePostCsrf();
         $payload = json_decode(file_get_contents('php://input') ?: '', true);
         $publicKey = is_array($payload) ? trim((string) ($payload['public_key'] ?? '')) : '';
 

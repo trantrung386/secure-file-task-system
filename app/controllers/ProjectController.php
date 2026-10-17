@@ -80,9 +80,7 @@ class ProjectController extends BaseController
     public function store(): void
     {
         $this->requireRole(['manager', 'admin']);
-        if (!\is_post()) {
-            \redirect('du_an/index');
-        }
+        $this->requirePostCsrf();
 
         $user = Auth::user();
         $model = new Project();
@@ -158,9 +156,7 @@ class ProjectController extends BaseController
     public function update(int $id): void
     {
         $this->requireLogin();
-        if (!\is_post()) {
-            \redirect('du_an/index');
-        }
+        $this->requirePostCsrf();
 
         $model = new Project();
         $existingProject = $model->find($id);
@@ -224,9 +220,7 @@ class ProjectController extends BaseController
     public function destroy(int $id): void
     {
         $this->requireLogin();
-        if (!\is_post()) {
-            \redirect('du_an/index');
-        }
+        $this->requirePostCsrf();
 
         $model = new Project();
         $project = $model->find($id);
@@ -291,9 +285,7 @@ class ProjectController extends BaseController
     public function addMember(int $projectId): void
     {
         $this->requireLogin();
-        if (!\is_post()) {
-            \redirect('du_an/members', ['id' => $projectId]);
-        }
+        $this->requirePostCsrf();
 
         if (!(new Project())->userCanManageProject(Auth::user(), $projectId)) {
             \flash('danger', 'Ban khong co quyen them thanh vien vao du an nay.');
@@ -331,7 +323,9 @@ class ProjectController extends BaseController
     public function removeMember(int $projectId): void
     {
         $this->requireLogin();
-        $userId = \App\Core\Validator::validateId($_GET['user_id'] ?? null);
+        $this->requirePostCsrf();
+
+        $userId = \App\Core\Validator::validateId($_GET['user_id'] ?? $_POST['user_id'] ?? null);
 
         if ($userId === null) {
             \flash('danger', 'ID thành viên không hợp lệ.');

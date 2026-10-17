@@ -22,6 +22,8 @@ class AuthController extends BaseController
         }
 
         if (\is_post()) {
+            $this->requirePostCsrf();
+
             $validator = \App\Core\Validator::make($_POST, [
                 'email' => 'required|email|max:150',
                 'password' => 'required|string|min:1|max:255',
@@ -55,6 +57,8 @@ class AuthController extends BaseController
      */
     public function logout(): void
     {
+        $this->requirePostCsrf();
+
         $user = Auth::user();
         if ($user) {
             (new Log())->create($user['id'], 'logout', 'auth', null, 'Đăng xuất hệ thống');
