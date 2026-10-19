@@ -42,20 +42,24 @@ class Task extends BaseModel
         }
 
         if ($user['role'] === 'employee') {
-            $conditions[] = '(t.assignee_id = :uid OR EXISTS (
-                SELECT 1 FROM cong_viec_phu_trach cpt WHERE cpt.task_id = t.id AND cpt.user_id = :uid
+            $conditions[] = '(t.assignee_id = :uid1 OR EXISTS (
+                SELECT 1 FROM cong_viec_phu_trach cpt WHERE cpt.task_id = t.id AND cpt.user_id = :uid2
             ) OR EXISTS (
                 SELECT 1 FROM thanh_vien_du_an pm_lead
                 WHERE pm_lead.project_id = t.project_id
-                  AND pm_lead.user_id = :uid
+                  AND pm_lead.user_id = :uid3
                   AND pm_lead.project_role = \'lead\'
             ))';
-            $params['uid'] = (int) $user['id'];
+            $params['uid1'] = (int) $user['id'];
+            $params['uid2'] = (int) $user['id'];
+            $params['uid3'] = (int) $user['id'];
         } elseif ($user['role'] === 'manager') {
-            $conditions[] = '(t.created_by = :uid OR p.created_by = :uid OR EXISTS (
-                SELECT 1 FROM thanh_vien_du_an pm WHERE pm.project_id = t.project_id AND pm.user_id = :uid
+            $conditions[] = '(t.created_by = :uid1 OR p.created_by = :uid2 OR EXISTS (
+                SELECT 1 FROM thanh_vien_du_an pm WHERE pm.project_id = t.project_id AND pm.user_id = :uid3
             ))';
-            $params['uid'] = (int) $user['id'];
+            $params['uid1'] = (int) $user['id'];
+            $params['uid2'] = (int) $user['id'];
+            $params['uid3'] = (int) $user['id'];
         }
 
         $where = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
@@ -372,30 +376,49 @@ class Task extends BaseModel
     }
 
     /**
-     * Tính nhanh các chỉ số tổng quan cho Dashboard.
+     * Tính nhanh các chỉ số tổng quan và tỷ lệ trạng thái cho Dashboard.
      */
     public function statsForDashboard(array $user): array
     {
         $cong_viec = $this->forUser($user);
+        $total = count($cong_viec);
         $stats = [
-            'total' => count($cong_viec),
+            'total' => $total,
             'approved' => 0,
             'submitted' => 0,
             'overdue' => 0,
+            'in_progress' => 0,
+            'assigned' => 0,
+            'doing' => 0,
+            'redo' => 0,
+            'blocked' => 0,
+            'new' => 0,
         ];
 
         $today = date('Y-m-d');
         foreach ($cong_viec as $task) {
-            if ($task['status'] === 'approved') {
-                $stats['approved']++;
+            $st = (string) ($task['status'] ?? 'new');
+            if (isset($stats[$st])) {
+                $stats[$st]++;
             }
-            if ($task['status'] === 'submitted') {
-                $stats['submitted']++;
+            if (in_array($st, ['assigned', 'in_progress'], true)) {
+                $stats['doing']++;
             }
-            if ($task['deadline'] < $today && !in_array($task['status'], ['approved'], true)) {
+            if (!empty($task['deadline']) && $task['deadline'] < $today && !in_array($st, ['approved'], true)) {
                 $stats['overdue']++;
             }
         }
+
+        $pct = static fn (int $count): float => $total > 0 ? round(($count / $total) * 100, 1) : 0.0;
+        $stats['rates'] = [
+            'doing' => $pct($stats['doing']),
+            'submitted' => $pct($stats['submitted']),
+            'approved' => $pct($stats['approved']),
+            'overdue' => $pct($stats['overdue']),
+            'redo' => $pct($stats['redo']),
+            'blocked' => $pct($stats['blocked']),
+            'new' => $pct($stats['new']),
+        ];
 
         return $stats;
     }

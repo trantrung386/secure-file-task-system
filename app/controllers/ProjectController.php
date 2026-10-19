@@ -305,10 +305,27 @@ class ProjectController extends BaseController
         $validated = $validator->validated();
         $userId = (int) $validated['user_id'];
         $projectRole = $validated['project_role'];
-        $ok = (new Project())->addMember($projectId, $userId, $projectRole);
+        $projectModel = new Project();
+        $ok = $projectModel->addMember($projectId, $userId, $projectRole);
 
         if ($ok) {
             (new Log())->create(Auth::user()['id'], 'create', 'project_member', $projectId, 'Thêm thành viên vào dự án');
+            try {
+                $project = $projectModel->find($projectId);
+                if ($project) {
+                    (new \App\Models\Notification())->notifyEvent(
+                        [$userId],
+                        (int) Auth::user()['id'],
+                        'Tham gia dự án: ' . $project['name'],
+                        'Bạn đã được thêm vào dự án "' . $project['name'] . '" (' . $project['code'] . ').',
+                        'project_member',
+                        $projectId,
+                        null,
+                        \route_url('du_an/show', ['id' => $projectId])
+                    );
+                }
+            } catch (\Throwable $e) {
+            }
             \flash('success', 'Đã thêm thành viên vào dự án.');
         } else {
             \flash('danger', 'Không thể thêm thành viên.');

@@ -4,6 +4,14 @@ $authUser = current_user();
 $currentRoute = (string) ($_GET['route'] ?? ($authUser ? 'dashboard/index' : 'home/index'));
 $isPublicPage = !$authUser && str_starts_with($currentRoute, 'home/');
 $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
+$unreadNotifCount = 0;
+if ($authUser) {
+    try {
+        $unreadNotifCount = (new \App\Models\Notification())->unreadCount((int) $authUser['id']);
+    } catch (\Throwable $e) {
+        $unreadNotifCount = 0;
+    }
+}
 ?>
 <!doctype html>
 <html lang="vi">
@@ -93,6 +101,23 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
                     <span>Quản lý dự án</span>
                 </a>
 
+                <?php if (in_array($authUser['role'], ['manager', 'admin'], true)): ?>
+                    <a class="menu-link <?= e(active_menu('files/') ?: active_menu('tai_lieu/')) ?>" href="<?= e(route_url('files/index')) ?>" data-short-label="TL" title="Quản lý tài liệu">
+                        <span>Quản lý tài liệu</span>
+                    </a>
+                <?php endif; ?>
+
+                <?php $notifMenuTitle = in_array($authUser['role'], ['manager', 'admin'], true) ? 'Quản lý thông báo' : 'Xem thông báo'; ?>
+                <a class="menu-link <?= e(active_menu('thong_bao/')) ?> d-flex justify-content-between align-items-center"
+                   href="<?= e(route_url('thong_bao/index')) ?>"
+                   data-short-label="TB"
+                   title="<?= e($notifMenuTitle) ?>">
+                    <span><?= e($notifMenuTitle) ?></span>
+                    <?php if ($unreadNotifCount > 0): ?>
+                        <span class="badge rounded-pill text-bg-danger"><?= e((string) $unreadNotifCount) ?></span>
+                    <?php endif; ?>
+                </a>
+
                 <?php if ($authUser['role'] === 'admin'): ?>
                     <a class="menu-link <?= e(active_menu('tai_khoan/')) ?>" href="<?= e(route_url('tai_khoan/index')) ?>" data-short-label="TK" title="Quản lý tài khoản">
                         <span>Quản lý tài khoản</span>
@@ -117,6 +142,21 @@ $isLoginPage = !$authUser && str_starts_with($currentRoute, 'auth/');
                     <div class="page-label">TruTo Work</div>
                 </div>
                 <div class="topbar-user">
+                    <a class="btn btn-light border position-relative p-0 d-inline-flex align-items-center justify-content-center rounded-circle"
+                       style="width: 32px; height: 32px; min-height: 32px;"
+                       href="<?= e(route_url('thong_bao/index', ['tab' => 'inbox'])) ?>"
+                       title="Thông báo của bạn"
+                       aria-label="Thông báo của bạn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" class="text-secondary" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6"/>
+                        </svg>
+                        <?php if ($unreadNotifCount > 0): ?>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger"
+                                  style="font-size: 0.62rem; padding: 0.18em 0.4em;">
+                                <?= e($unreadNotifCount > 99 ? '99+' : (string) $unreadNotifCount) ?>
+                            </span>
+                        <?php endif; ?>
+                    </a>
                     <div class="avatar-badge"><?= e(strtoupper(substr($authUser['name'], 0, 1))) ?></div>
                     <div class="d-none d-sm-block">
                         <div class="fw-semibold text-truncate" style="max-width: 140px;"><?= e($authUser['name']) ?></div>

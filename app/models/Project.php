@@ -25,8 +25,11 @@ class Project extends BaseModel
                  FROM du_an p
                  LEFT JOIN tai_khoan u ON u.id = p.created_by
                  LEFT JOIN thanh_vien_du_an pm ON pm.project_id = p.id
-                 WHERE (p.created_by = :uid OR pm.user_id = :uid)';
-            $params = ['uid' => $user['id']];
+                 WHERE (p.created_by = :uid1 OR pm.user_id = :uid2)';
+            $params = [
+                'uid1' => (int) $user['id'],
+                'uid2' => (int) $user['id'],
+            ];
             if ($hasKw) {
                 $sql .= ' AND (p.code LIKE :kw_code OR p.name LIKE :kw_name OR p.description LIKE :kw_desc)';
                 $params['kw_code'] = $kw;

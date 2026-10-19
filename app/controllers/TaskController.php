@@ -216,6 +216,20 @@ class TaskController extends BaseController
 
         if ($ok) {
             (new Log())->create(Auth::user()['id'], 'assign', 'task', $id, 'Điều chỉnh phân công công việc');
+            try {
+                $deadlineLabel = \format_date((string) ($_POST['deadline'] ?? $task['deadline']));
+                (new \App\Models\Notification())->notifyEvent(
+                    $assigneeIds,
+                    (int) Auth::user()['id'],
+                    'Phân công công việc: ' . $task['title'],
+                    'Bạn đã được phân công thực hiện công việc "' . $task['title'] . '" thuộc dự án "' . ($task['project_name'] ?? '') . '". Hạn chót: ' . $deadlineLabel . '.',
+                    'task_assigned',
+                    (int) $task['project_id'],
+                    $id,
+                    \route_url('cong_viec/show', ['id' => $id])
+                );
+            } catch (\Throwable $e) {
+            }
             if (!empty($_FILES['attachment']['name'])) {
                 try {
                     $reason = trim($_POST['upload_reason'] ?? '');
@@ -269,6 +283,31 @@ class TaskController extends BaseController
 
         if ($ok) {
             (new Log())->create($user['id'], 'update_status', 'task', $id, 'Cập nhật trạng thái công việc');
+            try {
+                $projectModel = new Project();
+                $project = $projectModel->find((int) $task['project_id']);
+                $managerIds = [(int) $task['created_by']];
+                if ($project) {
+                    $managerIds[] = (int) $project['created_by'];
+                }
+                foreach ($projectModel->members((int) $task['project_id']) as $m) {
+                    if (($m['project_role'] ?? '') === 'lead' || ($m['role'] ?? '') === 'manager') {
+                        $managerIds[] = (int) $m['user_id'];
+                    }
+                }
+                $noteText = trim((string) $note) !== '' ? ' Ghi chú: ' . trim((string) $note) : '';
+                (new \App\Models\Notification())->notifyEvent(
+                    $managerIds,
+                    (int) $user['id'],
+                    'Cập nhật tiến độ: ' . $task['title'],
+                    $user['name'] . ' đã chuyển trạng thái công việc "' . $task['title'] . '" sang "' . \status_label($status) . '".' . $noteText,
+                    'task_status',
+                    (int) $task['project_id'],
+                    $id,
+                    \route_url('cong_viec/show', ['id' => $id])
+                );
+            } catch (\Throwable $e) {
+            }
             \flash('success', 'Cập nhật trạng thái thành công.');
         } else {
             \flash('danger', 'Cập nhật trạng thái thất bại.');
@@ -365,10 +404,29 @@ class TaskController extends BaseController
         $comment = $validated['review_comment'] ?? '';
         $score = isset($validated['review_score']) ? (int) $validated['review_score'] : 0;
 
-        $ok = (new Task())->review($id, $status, $comment, $score, (int) Auth::user()['id']);
+        $taskModel = new Task();
+        $ok = $taskModel->review($id, $status, $comment, $score, (int) Auth::user()['id']);
 
         if ($ok) {
             (new Log())->create(Auth::user()['id'], 'review', 'task', $id, 'Duyệt và đánh giá công việc');
+            try {
+                $assignees = array_map(static fn (array $u): int => (int) $u['id'], $taskModel->assignedUsers($id));
+                if (!empty($task['assignee_id'])) {
+                    $assignees[] = (int) $task['assignee_id'];
+                }
+                $commentText = trim((string) $comment) !== '' ? ' Nhận xét: ' . trim((string) $comment) : '';
+                (new \App\Models\Notification())->notifyEvent(
+                    $assignees,
+                    (int) Auth::user()['id'],
+                    'Kết quả duyệt công việc: ' . $task['title'],
+                    'Công việc "' . $task['title'] . '" đã được đánh giá: ' . \status_label($status) . ' (Điểm: ' . $score . ').' . $commentText,
+                    'task_reviewed',
+                    (int) $task['project_id'],
+                    $id,
+                    \route_url('cong_viec/show', ['id' => $id])
+                );
+            } catch (\Throwable $e) {
+            }
             
             // Xử lý upload file từ manager (nếu có)
             if (!empty($_FILES['manager_attachment']['name'])) {

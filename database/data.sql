@@ -3,6 +3,8 @@ CREATE DATABASE IF NOT EXISTS `data` CHARACTER SET utf8 COLLATE utf8_general_ci;
 USE `data`;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS `thong_bao_nguoi_nhan`;
+DROP TABLE IF EXISTS `thong_bao`;
 DROP TABLE IF EXISTS `tep_dinh_kem`;
 DROP TABLE IF EXISTS `lich_su_trang_thai_cong_viec`;
 DROP TABLE IF EXISTS `nhat_ky_truy_cap`;
@@ -548,6 +550,45 @@ ALTER TABLE `tep_dinh_kem`
 ALTER TABLE `thanh_vien_du_an`
   ADD CONSTRAINT `fk_thanh_vien_du_an_project` FOREIGN KEY (`project_id`) REFERENCES `du_an` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_thanh_vien_du_an_user` FOREIGN KEY (`user_id`) REFERENCES `tai_khoan` (`id`) ON DELETE CASCADE;
+
+-- --------------------------------------------------------
+--
+-- Cấu trúc bảng cho bảng `thong_bao` và `thong_bao_nguoi_nhan`
+--
+
+CREATE TABLE IF NOT EXISTS `thong_bao` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `content` text NOT NULL,
+  `type` varchar(50) NOT NULL DEFAULT 'manual',
+  `scope` varchar(30) NOT NULL DEFAULT 'project',
+  `project_id` int(11) DEFAULT NULL,
+  `task_id` int(11) DEFAULT NULL,
+  `link_url` varchar(255) DEFAULT NULL,
+  `created_by` int(11) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_tb_project` (`project_id`),
+  KEY `idx_tb_task` (`task_id`),
+  KEY `idx_tb_created_by` (`created_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE IF NOT EXISTS `thong_bao_nguoi_nhan` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `notification_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `read_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_notif_user` (`notification_id`,`user_id`),
+  KEY `idx_tbnn_user` (`user_id`),
+  KEY `idx_tbnn_notif` (`notification_id`),
+  CONSTRAINT `fk_tbnn_notif` FOREIGN KEY (`notification_id`) REFERENCES `thong_bao` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tbnn_user` FOREIGN KEY (`user_id`) REFERENCES `tai_khoan` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
