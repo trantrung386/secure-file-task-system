@@ -26,7 +26,10 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Mật khẩu</label>
-                    <input type="password" name="password" class="form-control form-control-lg" required value="admin123" placeholder="Nhập mật khẩu">
+                    <input type="password" name="password" class="form-control form-control-lg<?= !empty($error) ? ' is-invalid' : '' ?>" required value="admin123" placeholder="Nhập mật khẩu">
+                    <?php if (!empty($error)): ?>
+                        <div class="text-danger small mt-2 fw-medium"><?= e($error) ?></div>
+                    <?php endif; ?>
                 </div>
                 <button type="submit" class="btn btn-primary btn-lg w-100">Đăng nhập vào hệ thống</button>
             </form>

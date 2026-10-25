@@ -21,8 +21,19 @@ class AuthController extends BaseController
             \redirect('dashboard/index');
         }
 
+        $error = null;
+
         if (\is_post()) {
             $this->requirePostCsrf();
+
+            // Kiểm tra nếu phiên đang bị khóa tạm thời do nhập sai quá số lần cho phép
+            if (Auth::isLockedOut()) {
+                sleep(Auth::FAIL_DELAY);
+                $remain = Auth::remainingLockoutSeconds();
+                $error = "Tạm khóa đăng nhập quá " . Auth::MAX_ATTEMPTS . " lần sai. Thử lại sau {$remain}s.";
+                $this->render('auth/login', ['error' => $error], 'Đăng nhập');
+                return;
+            }
 
             $validator = \App\Core\Validator::make($_POST, [
                 'email' => 'required|email|max:150',
@@ -30,8 +41,8 @@ class AuthController extends BaseController
             ]);
 
             if ($validator->fails()) {
-                \flash('danger', $validator->firstError());
-                $this->render('auth/login', [], 'Đăng nhập');
+                $error = $validator->firstError();
+                $this->render('auth/login', ['error' => $error], 'Đăng nhập');
                 return;
             }
 
@@ -46,10 +57,27 @@ class AuthController extends BaseController
                 \redirect('dashboard/index');
             }
 
-            \flash('danger', 'Email hoặc mật khẩu không đúng, hoặc tài khoản đang bị khóa.');
+            // Ghi nhật ký cảnh báo đăng nhập thất bại / dấu hiệu Brute Force
+            $attempts = Auth::failedAttempts();
+            $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+            (new Log())->create(
+                null,
+                'login_failed',
+                'auth',
+                null,
+                "Đăng nhập thất bại lần {$attempts} với email: {$email} (IP: {$ip})"
+            );
+
+            if (Auth::isLockedOut()) {
+                $remain = Auth::remainingLockoutSeconds();
+                $error = "Nhập sai quá " . Auth::MAX_ATTEMPTS . " lần. Tạm khóa trong {$remain}s.";
+            } else {
+                $attemptsLeft = max(0, Auth::MAX_ATTEMPTS - $attempts);
+                $error = "Sai email hoặc mật khẩu (còn {$attemptsLeft} lần thử).";
+            }
         }
 
-        $this->render('auth/login', [], 'Đăng nhập');
+        $this->render('auth/login', ['error' => $error], 'Đăng nhập');
     }
 
     /**
