@@ -75,14 +75,25 @@ class CryptoController extends BaseController
     private function jsonRecipients(array $users): void
     {
         header('Content-Type: application/json');
+        $currentUser = Auth::user();
+        if ($currentUser && !empty($currentUser['id'])) {
+            $freshCurrent = (new User())->find((int) $currentUser['id']);
+            if ($freshCurrent) {
+                $users[] = $freshCurrent;
+            }
+        }
+
         $rows = [];
+        $seen = [];
         foreach ($users as $user) {
-            if (!$user || empty($user['public_key_jwk'])) {
+            $uid = (int) ($user['id'] ?? 0);
+            if ($uid <= 0 || isset($seen[$uid]) || empty($user['public_key_jwk'])) {
                 continue;
             }
+            $seen[$uid] = true;
 
             $rows[] = [
-                'id' => (int) $user['id'],
+                'id' => $uid,
                 'name' => $user['name'],
                 'public_key' => $user['public_key_jwk'],
             ];

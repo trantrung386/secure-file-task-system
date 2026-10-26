@@ -294,7 +294,7 @@ class ProjectController extends BaseController
 
         $validator = \App\Core\Validator::make($_POST, [
             'user_id' => 'required|positive_int',
-            'project_role' => 'required|in:lead,member',
+            'project_role' => 'required|in:lead,member,reviewer',
         ]);
 
         if ($validator->fails()) {
@@ -306,7 +306,11 @@ class ProjectController extends BaseController
         $userId = (int) $validated['user_id'];
         $projectRole = $validated['project_role'];
         $projectModel = new Project();
-        $ok = $projectModel->addMember($projectId, $userId, $projectRole);
+        try {
+            $ok = $projectModel->addMember($projectId, $userId, $projectRole);
+        } catch (\Throwable $e) {
+            $ok = false;
+        }
 
         if ($ok) {
             (new Log())->create(Auth::user()['id'], 'create', 'project_member', $projectId, 'Thêm thành viên vào dự án');

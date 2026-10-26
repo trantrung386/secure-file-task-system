@@ -19,11 +19,12 @@ if ($authUser) {
     <meta charset="UTF-8">
     <title><?= e($title) ?> - <?= e(APP_NAME) ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="assets/images/logo-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="assets/css/app.css?v=20260404a" rel="stylesheet">
+    <link href="assets/css/app.css?v=20261025v6" rel="stylesheet">
 </head>
 <body>
 <?php if ($flash): ?>
@@ -39,9 +40,11 @@ if ($authUser) {
         <header class="public-header">
             <div class="public-container public-header-inner">
                 <a class="brand-public" href="<?= e(route_url('home/index')) ?>">
-                    <span class="brand-public-mark">TTW</span>
+                    <span class="brand-public-mark">
+                        <img src="assets/images/logo-icon.png" alt="TruTo Work">
+                    </span>
                     <span>
-                        <strong>TruTo Work</strong>
+                        <strong>TruTo <span class="text-primary fw-semibold">Work</span></strong>
                         <small>Quản lý công việc theo dự án</small>
                     </span>
                 </a>
@@ -77,10 +80,12 @@ if ($authUser) {
         <div class="sidebar-backdrop" data-sidebar-close></div>
         <aside class="sidebar shadow-sm">
             <div class="sidebar-header">
-                <div class="sidebar-brand">
-                    <div class="brand-icon">TTW</div>
-                    <div class="brand-title">TruTo Work</div>
-                </div>
+                <a class="sidebar-brand text-decoration-none" href="<?= e(route_url('dashboard/index')) ?>">
+                    <div class="brand-icon">
+                        <img src="assets/images/logo-icon.png" alt="TruTo Work">
+                    </div>
+                    <div class="brand-title">TruTo <span class="brand-title-accent">Work</span></div>
+                </a>
                 <button type="button" class="sidebar-close-btn d-lg-none" data-sidebar-close aria-label="Đóng menu">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -88,48 +93,72 @@ if ($authUser) {
 
             <nav class="sidebar-menu">
                 <a class="menu-link <?= e(active_menu('dashboard/')) ?>" href="<?= e(route_url('dashboard/index')) ?>" data-short-label="TG" title="Tổng quan">
-                    <span>Tổng quan</span>
+                    <span class="menu-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </span>
+                    <span class="menu-text">Tổng quan</span>
                 </a>
                 <a class="menu-link <?= e(active_menu('cong_viec/')) ?>" href="<?= e(route_url('cong_viec/index')) ?>" data-short-label="CV" title="Quản lý công việc">
-                    <span>Quản lý công việc</span>
+                    <span class="menu-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+                    </span>
+                    <span class="menu-text">Quản lý công việc</span>
                 </a>
                 <a class="menu-link <?= e(active_menu('kpi/')) ?>" href="<?= e(route_url('kpi/index')) ?>" data-short-label="KPI" title="Báo cáo KPI">
-                    <span>Báo cáo KPI</span>
+                    <span class="menu-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect width="4" height="7" x="7" y="10" rx="1"/><rect width="4" height="12" x="15" y="5" rx="1"/></svg>
+                    </span>
+                    <span class="menu-text">Báo cáo KPI</span>
                 </a>
 
                 <a class="menu-link <?= e(active_menu('du_an/')) ?>" href="<?= e(route_url('du_an/index')) ?>" data-short-label="DA" title="Quản lý dự án">
-                    <span>Quản lý dự án</span>
+                    <span class="menu-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                    </span>
+                    <span class="menu-text">Quản lý dự án</span>
                 </a>
 
                 <?php if (in_array($authUser['role'], ['manager', 'admin'], true)): ?>
                     <a class="menu-link <?= e(active_menu('files/') ?: active_menu('tai_lieu/')) ?>" href="<?= e(route_url('files/index')) ?>" data-short-label="TL" title="Quản lý tài liệu">
-                        <span>Quản lý tài liệu</span>
+                        <span class="menu-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                        </span>
+                        <span class="menu-text">Quản lý tài liệu</span>
                     </a>
                 <?php endif; ?>
 
                 <?php $notifMenuTitle = in_array($authUser['role'], ['manager', 'admin'], true) ? 'Quản lý thông báo' : 'Xem thông báo'; ?>
-                <a class="menu-link <?= e(active_menu('thong_bao/')) ?> d-flex justify-content-between align-items-center"
+                <a class="menu-link <?= e(active_menu('thong_bao/')) ?>"
                    href="<?= e(route_url('thong_bao/index')) ?>"
                    data-short-label="TB"
                    title="<?= e($notifMenuTitle) ?>">
-                    <span><?= e($notifMenuTitle) ?></span>
+                    <span class="menu-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                    </span>
+                    <span class="menu-text flex-grow-1"><?= e($notifMenuTitle) ?></span>
                     <?php if ($unreadNotifCount > 0): ?>
-                        <span class="badge rounded-pill text-bg-danger"><?= e((string) $unreadNotifCount) ?></span>
+                        <span class="badge rounded-pill text-bg-danger menu-badge"><?= e((string) $unreadNotifCount) ?></span>
                     <?php endif; ?>
                 </a>
 
                 <?php if ($authUser['role'] === 'admin'): ?>
                     <a class="menu-link <?= e(active_menu('tai_khoan/')) ?>" href="<?= e(route_url('tai_khoan/index')) ?>" data-short-label="TK" title="Quản lý tài khoản">
-                        <span>Quản lý tài khoản</span>
+                        <span class="menu-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </span>
+                        <span class="menu-text">Quản lý tài khoản</span>
                     </a>
                     <a class="menu-link <?= e(active_menu('nhat_ky/')) ?>" href="<?= e(route_url('nhat_ky/index')) ?>" data-short-label="NK" title="Nhật ký truy cập">
-                        <span>Nhật ký truy cập</span>
+                        <span class="menu-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                        </span>
+                        <span class="menu-text">Nhật ký truy cập</span>
                     </a>
                 <?php endif; ?>
             </nav>
 
             <div class="sidebar-footer">
-                <div class="small text-secondary">Nền tảng quản lý công việc theo dự án.</div>
+                <div class="sidebar-footer-text">Nền tảng quản lý công việc theo dự án.</div>
             </div>
         </aside>
 
@@ -143,7 +172,7 @@ if ($authUser) {
                 </div>
                 <div class="topbar-user">
                     <a class="btn btn-light border position-relative p-0 d-inline-flex align-items-center justify-content-center rounded-circle"
-                       style="width: 32px; height: 32px; min-height: 32px;"
+                       style="width: 34px; height: 34px; min-height: 34px;"
                        href="<?= e(route_url('thong_bao/index', ['tab' => 'inbox'])) ?>"
                        title="Thông báo của bạn"
                        aria-label="Thông báo của bạn">
@@ -256,4 +285,3 @@ if ($authUser) {
 <?php endif; ?>
 </body>
 </html>
-

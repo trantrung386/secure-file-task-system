@@ -60,11 +60,11 @@ class KpiService
         $fromDate = $this->normalizeDate($filters['from_date'] ?? '');
         $toDate = $this->normalizeDate($filters['to_date'] ?? '');
         if ($fromDate !== null) {
-            $sql .= ' AND t.deadline >= :from_date';
+            $sql .= ' AND DATE(t.deadline) >= :from_date';
             $params['from_date'] = $fromDate;
         }
         if ($toDate !== null) {
-            $sql .= ' AND t.deadline <= :to_date';
+            $sql .= ' AND DATE(t.deadline) <= :to_date';
             $params['to_date'] = $toDate;
         }
 
@@ -111,11 +111,17 @@ class KpiService
                 $grouped[$uid]['redo_tasks']++;
             }
 
-            $deadline = $row['deadline'] ?? null;
-            $approvedAt = !empty($row['approved_at']) ? date('Y-m-d', strtotime($row['approved_at'])) : null;
+            $rawDeadline = trim((string) ($row['deadline'] ?? ''));
+            $deadline = ($rawDeadline !== '' && !str_starts_with($rawDeadline, '0000-00-00'))
+                ? date('Y-m-d', strtotime($rawDeadline))
+                : null;
+            $rawApprovedAt = trim((string) ($row['approved_at'] ?? ''));
+            $approvedAt = ($rawApprovedAt !== '' && !str_starts_with($rawApprovedAt, '0000-00-00'))
+                ? date('Y-m-d', strtotime($rawApprovedAt))
+                : null;
 
             if ($row['status'] === 'approved' && $approvedAt !== null) {
-                if ($approvedAt <= $deadline) {
+                if ($deadline === null || $approvedAt <= $deadline) {
                     $grouped[$uid]['on_time_tasks']++;
                 } else {
                     $grouped[$uid]['approved_late_tasks']++;

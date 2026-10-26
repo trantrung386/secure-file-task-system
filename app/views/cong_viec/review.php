@@ -32,12 +32,12 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold">Điểm đánh giá</label>
-                    <input type="number" class="form-control" name="review_score" value="<?= e((string) ($task['review_score'] ?? 0)) ?>" min="0" max="20">
+                    <label class="form-label fw-semibold">Điểm đánh giá (0 - 100)</label>
+                    <input type="number" class="form-control" name="review_score" value="<?= e((string) ($task['review_score'] ?? 0)) ?>" min="0" max="100">
                 </div>
                 <div class="col-md-12">
                     <label class="form-label fw-semibold">Nhận xét</label>
-                    <textarea class="form-control" name="review_comment" rows="4" placeholder="Nhập nhận xét, mức độ hoàn thành hoặc lý do yêu cầu chỉnh sửa"></textarea>
+                    <textarea class="form-control" name="review_comment" rows="4" placeholder="Nhập nhận xét, mức độ hoàn thành hoặc lý do yêu cầu chỉnh sửa"><?= e((string) ($task['review_comment'] ?? '')) ?></textarea>
                 </div>
 
                 <!-- Manager upload file hướng dẫn / tài liệu -->
@@ -47,9 +47,9 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Chọn file</label>
-                            <input type="file" class="form-control" name="manager_attachment" data-e2e-file data-recipient-url="<?= e(route_url('crypto/taskRecipients', ['id' => $task['id']])) ?>">
+                            <input type="file" class="form-control" name="manager_attachment" data-e2e-file data-recipient-url="<?= e(route_url('crypto/taskRecipients', ['id' => $task['id']])) ?>" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt">
                             <div class="small text-secondary mt-2">
-                                File sẽ được mã hóa. Hỗ trợ: pdf, doc, docx, xls, xlsx, png, jpg, jpeg, txt. Max 5MB.
+                                File sẽ được mã hóa. Hỗ trợ: pdf, doc, docx, xls, xlsx, png, jpg, jpeg, txt. Max 20MB.
                             </div>
                         </div>
                         <div class="col-md-6">

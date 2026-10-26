@@ -2,7 +2,10 @@
     <section class="auth-split-card">
         <div class="auth-visual-panel">
             <div class="auth-visual-top">
-                <span class="public-kicker dark">TruTo Work</span>
+                <span class="public-kicker dark">
+                    <img src="assets/images/logo-icon.png" alt="" style="width: 20px; height: 20px; object-fit: contain; background: #fff; border-radius: 5px; padding: 2px;">
+                    TruTo Work
+                </span>
                 <h2>Quản lý dự án và công việc trên một giao diện gọn gàng.</h2>
                 <p>Thiết kế sạch, dễ nhìn và phù hợp cho doanh nghiệp sử dụng hằng ngày.</p>
             </div>

@@ -167,15 +167,15 @@ class User extends BaseModel
              INNER JOIN cong_viec t ON t.id = :task_id
              INNER JOIN du_an p ON p.id = t.project_id
              LEFT JOIN cong_viec_phu_trach cpt ON cpt.task_id = t.id AND cpt.user_id = u.id
-             LEFT JOIN thanh_vien_du_an pm_lead
-                ON pm_lead.project_id = t.project_id
-               AND pm_lead.user_id = u.id
-               AND pm_lead.project_role = 'lead'
+             LEFT JOIN thanh_vien_du_an pm
+                ON pm.project_id = t.project_id
+               AND pm.user_id = u.id
              WHERE u.status = 'active'
                AND (
                    u.role = 'admin'
                    OR u.id = p.created_by
-                   OR pm_lead.user_id IS NOT NULL
+                   OR u.id = t.created_by
+                   OR pm.user_id IS NOT NULL
                    OR cpt.user_id IS NOT NULL
                )
              ORDER BY u.name"

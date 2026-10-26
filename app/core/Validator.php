@@ -118,6 +118,10 @@ class Validator
                 continue;
             }
 
+            $isNumericField = in_array('int', $rules, true)
+                || in_array('integer', $rules, true)
+                || in_array('positive_int', $rules, true);
+
             foreach ($rules as $rule) {
                 if ($rule === 'required') {
                     continue;
@@ -130,7 +134,7 @@ class Validator
                     [$ruleName, $ruleParam] = explode(':', $rule, 2);
                 }
 
-                $this->applyRule($field, $value, $ruleName, $ruleParam);
+                $this->applyRule($field, $value, $ruleName, $ruleParam, $isNumericField);
             }
 
             if (!isset($this->errors[$field])) {
@@ -139,7 +143,7 @@ class Validator
         }
     }
 
-    private function applyRule(string $field, mixed $value, string $rule, ?string $param): void
+    private function applyRule(string $field, mixed $value, string $rule, ?string $param, bool $isNumericField = false): void
     {
         switch ($rule) {
             case 'string':
@@ -169,7 +173,7 @@ class Validator
 
             case 'min':
                 $min = (int) $param;
-                if (is_numeric($value)) {
+                if ($isNumericField && is_numeric($value)) {
                     if ((float) $value < $min) {
                         $this->addError($field, "Giá trị '{$field}' phải tối thiểu là {$min}.");
                     }
@@ -177,18 +181,26 @@ class Validator
                     if (mb_strlen($value, 'UTF-8') < $min) {
                         $this->addError($field, "Độ dài '{$field}' phải tối thiểu {$min} ký tự.");
                     }
+                } elseif (is_numeric($value)) {
+                    if ((float) $value < $min) {
+                        $this->addError($field, "Giá trị '{$field}' phải tối thiểu là {$min}.");
+                    }
                 }
                 break;
 
             case 'max':
                 $max = (int) $param;
-                if (is_numeric($value)) {
+                if ($isNumericField && is_numeric($value)) {
                     if ((float) $value > $max) {
                         $this->addError($field, "Giá trị '{$field}' không được vượt quá {$max}.");
                     }
                 } elseif (is_string($value)) {
                     if (mb_strlen($value, 'UTF-8') > $max) {
                         $this->addError($field, "Độ dài '{$field}' không được vượt quá {$max} ký tự.");
+                    }
+                } elseif (is_numeric($value)) {
+                    if ((float) $value > $max) {
+                        $this->addError($field, "Giá trị '{$field}' không được vượt quá {$max}.");
                     }
                 }
                 break;
@@ -202,7 +214,7 @@ class Validator
 
             case 'date':
                 if (!is_string($value) || !$this->isValidDate($value)) {
-                    $this->addError($field, "Định dạng ngày '{$field}' không hợp lệ (định dạng YYYY-MM-DD).");
+                    $this->addError($field, "Định dạng ngày '{$field}' không hợp lệ.");
                 }
                 break;
 
@@ -229,8 +241,20 @@ class Validator
 
     private function isValidDate(string $date): bool
     {
-        $d = \DateTime::createFromFormat('Y-m-d', trim($date));
-        return $d && $d->format('Y-m-d') === trim($date);
+        $trimmed = trim($date);
+        if ($trimmed === '' || str_starts_with($trimmed, '0000-00-00')) {
+            return false;
+        }
+
+        $formats = ['Y-m-d', 'Y-m-d\TH:i', 'Y-m-d\TH:i:s', 'Y-m-d H:i', 'Y-m-d H:i:s'];
+        foreach ($formats as $format) {
+            $d = \DateTime::createFromFormat($format, $trimmed);
+            if ($d && $d->format($format) === $trimmed) {
+                return true;
+            }
+        }
+
+        return strtotime($trimmed) !== false;
     }
 
     private function addError(string $field, string $message): void

@@ -117,12 +117,12 @@ if (($task['status'] ?? '') === 'blocked') {
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Điểm đánh giá</label>
-                                <input type="number" class="form-control" name="review_score" value="<?= e((string) ($task['review_score'] ?? 0)) ?>" min="0" max="20">
+                                <label class="form-label fw-semibold">Điểm đánh giá (0 - 100)</label>
+                                <input type="number" class="form-control" name="review_score" value="<?= e((string) ($task['review_score'] ?? 0)) ?>" min="0" max="100">
                             </div>
                             <div class="col-md-12">
                                 <label class="form-label fw-semibold">Nhận xét</label>
-                                <textarea class="form-control" name="review_comment" rows="3" placeholder="Nhập nhận xét, mức độ hoàn thành hoặc lý do yêu cầu chỉnh sửa"></textarea>
+                                <textarea class="form-control" name="review_comment" rows="3" placeholder="Nhập nhận xét, mức độ hoàn thành hoặc lý do yêu cầu chỉnh sửa"><?= e((string) ($task['review_comment'] ?? '')) ?></textarea>
                             </div>
                         </div>
                         <button class="btn btn-success mt-3">Lưu kết quả duyệt</button>
@@ -154,6 +154,8 @@ if (($task['status'] ?? '') === 'blocked') {
                                             <span class="badge text-bg-info ms-2">Hướng dẫn từ Manager</span>
                                         <?php elseif ($file['file_type'] === 'project_manager'): ?>
                                             <span class="badge text-bg-warning ms-2">File từ Manager</span>
+                                        <?php elseif ($file['file_type'] === 'assignment_manager'): ?>
+                                            <span class="badge text-bg-primary ms-2">File khi phân công</span>
                                         <?php else: ?>
                                             <span class="badge text-bg-success ms-2">Nộp từ Employee</span>
                                         <?php endif; ?>
@@ -164,7 +166,7 @@ if (($task['status'] ?? '') === 'blocked') {
                                         • <?= e(format_datetime($file['created_at'])) ?>
                                     </div>
 
-                                    <?php if (($file['file_type'] === 'manager' || $file['file_type'] === 'project_manager') && $file['upload_reason']): ?>
+                                    <?php if (!empty($file['upload_reason'])): ?>
                                         <div class="small text-muted">
                                             📝 <em><?= e($file['upload_reason']) ?></em>
                                         </div>

@@ -1,19 +1,26 @@
 <div class="section-header">
     <div>
-        <div class="section-title">Tai file E2E</div>
+        <div class="section-title">Tải tài liệu mã hóa E2E</div>
         <p class="section-desc"><?= e($attachment['original_name']) ?></p>
     </div>
-    <?php if (!empty($attachment['task_id'])): ?>
-        <a class="btn btn-outline-secondary" href="<?= e(route_url('cong_viec/show', ['id' => $attachment['task_id']])) ?>">Quay lai</a>
-    <?php endif; ?>
+    <div class="d-flex gap-2">
+        <?php if (!empty($attachment['task_id'])): ?>
+            <a class="btn btn-outline-secondary" href="<?= e(route_url('cong_viec/show', ['id' => $attachment['task_id']])) ?>">Quay lại công việc</a>
+        <?php elseif (!empty($attachment['resolved_project_id']) || !empty($attachment['project_id'])): ?>
+            <a class="btn btn-outline-secondary" href="<?= e(route_url('du_an/show', ['id' => $attachment['resolved_project_id'] ?? $attachment['project_id']])) ?>">Quay lại dự án</a>
+        <?php endif; ?>
+        <?php if (in_array(current_user()['role'] ?? '', ['manager', 'admin'], true)): ?>
+            <a class="btn btn-outline-primary" href="<?= e(route_url('files/index')) ?>">Quản lý tài liệu</a>
+        <?php endif; ?>
+    </div>
 </div>
 
 <div class="card border-0 shadow-sm">
     <div class="card-body p-4">
         <div class="d-flex flex-column gap-3">
             <div>
-                <div class="fw-semibold">File duoc giai ma truc tiep tren trinh duyet cua ban.</div>
-                <div class="small text-secondary">Server chi gui ciphertext va khong co khoa rieng de doc noi dung file.</div>
+                <div class="fw-semibold">Tài liệu được giải mã trực tiếp trên trình duyệt của bạn.</div>
+                <div class="small text-secondary">Máy chủ chỉ lưu trữ bản mã (ciphertext) và không nắm giữ khóa bí mật để đọc nội dung file.</div>
             </div>
 
             <button
@@ -25,11 +32,11 @@
                 data-filename="<?= e($attachment['original_name']) ?>"
                 data-mime="<?= e($attachment['mime_type'] ?: 'application/octet-stream') ?>"
             >
-                Giai ma va tai file
+                Giải mã và tải file
             </button>
 
             <div class="alert alert-info mb-0" data-e2e-download-status>
-                Bam nut de tai ciphertext, giai ma bang private key cua tai khoan hien tai, roi luu file goc.
+                Bấm nút trên để tải bản mã (ciphertext), giải mã bằng khóa bí mật (private key) của tài khoản hiện tại rồi lưu file gốc về máy.
             </div>
         </div>
     </div>

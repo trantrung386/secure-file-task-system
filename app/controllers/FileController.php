@@ -227,21 +227,23 @@ class FileController extends BaseController
         $attachmentModel = new Attachment();
         $attachment = $attachmentModel->find($id);
         if (!$attachment) {
-            exit('File khong ton tai.');
+            \flash('danger', 'Tài liệu không tồn tại.');
+            \back();
         }
 
         $this->authorize($attachment);
         $recipientKey = $attachmentModel->recipientKey($id, (int) Auth::user()['id']);
         if (!$recipientKey) {
-            exit('Tai khoan nay khong co khoa E2E de giai ma file.');
+            \flash('danger', 'Tài khoản này chưa có khóa giải mã E2E cho tài liệu này (tài liệu được tải lên trước khi tài khoản của bạn khởi tạo khóa bảo mật).');
+            \back();
         }
 
-        (new Log())->create(Auth::user()['id'], 'download', 'attachment', $id, 'Mo trang giai ma file E2E');
+        (new Log())->create(Auth::user()['id'], 'download', 'attachment', $id, 'Mở trang giải mã file E2E');
         $this->render('files/download', [
             'attachment' => $attachment,
             'recipientKey' => $recipientKey['encrypted_key'],
             'ciphertextUrl' => \route_url('files/ciphertext', ['id' => $id]),
-        ], 'Tai file E2E');
+        ], 'Tải file E2E');
     }
 
     public function ciphertext(int $id): void

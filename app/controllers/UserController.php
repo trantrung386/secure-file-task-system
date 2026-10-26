@@ -210,7 +210,14 @@ class UserController extends BaseController
             \redirect('tai_khoan/index');
         }
 
-        $ok = (new User())->delete($id);
+        try {
+            $ok = (new User())->delete($id);
+        } catch (\Throwable $e) {
+            \flash('danger', 'Không thể xóa tài khoản vì đang có dữ liệu dự án, công việc hoặc tài liệu liên quan. Vui lòng sử dụng chức năng Khóa/Mở tài khoản.');
+            \redirect('tai_khoan/index');
+            return;
+        }
+
         if ($ok) {
             (new Log())->create(Auth::user()['id'], 'delete', 'user', $id, 'Xóa tài khoản');
             \flash('success', 'Đã xóa tài khoản.');

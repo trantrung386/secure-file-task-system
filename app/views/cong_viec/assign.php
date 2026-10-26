@@ -75,29 +75,38 @@
                     </div>
                 </div>
 
+                <?php
+                $startVal = (!empty($task['start_date']) && !str_starts_with((string) $task['start_date'], '0000-00-00'))
+                    ? date('Y-m-d\TH:i', strtotime((string) $task['start_date']))
+                    : '';
+                $deadlineVal = (!empty($task['deadline']) && !str_starts_with((string) $task['deadline'], '0000-00-00'))
+                    ? date('Y-m-d\TH:i', strtotime((string) $task['deadline']))
+                    : '';
+                $taskPriority = (string) ($task['priority'] ?? '');
+                ?>
                 <div class="col-sm-6 col-lg-2">
                     <label class="form-label fw-semibold">Ngày giao việc</label>
-                    <input type="datetime-local" class="form-control" name="start_date" value="">
+                    <input type="datetime-local" class="form-control" name="start_date" value="<?= e($startVal) ?>">
                 </div>
 
                 <div class="col-sm-6 col-lg-3">
                     <label class="form-label fw-semibold">Hạn chót thực hiện</label>
-                    <input type="datetime-local" class="form-control" name="deadline" value="">
+                    <input type="datetime-local" class="form-control" name="deadline" value="<?= e($deadlineVal) ?>">
                 </div>
             </div>
             <div class="row g-3 mt-3">
                 <div class="col-12 col-lg-8">
                     <label class="form-label fw-semibold">Mô tả chi tiết & yêu cầu cụ thể</label>
-                    <textarea class="form-control" name="detailed_description" rows="3" placeholder="Mô tả chi tiết công việc, các bước thực hiện, yêu cầu kỹ thuật, tiêu chí nghiệm thu"></textarea>
+                    <textarea class="form-control" name="detailed_description" rows="3" placeholder="Mô tả chi tiết công việc, các bước thực hiện, yêu cầu kỹ thuật, tiêu chí nghiệm thu"><?= e((string) ($task['description'] ?? '')) ?></textarea>
                 </div>
 
                 <div class="col-12 col-lg-4">
                     <label class="form-label fw-semibold">Mức độ ưu tiên</label>
                     <select class="form-select mb-2" name="priority">
                         <option value="">-- Chọn mức độ --</option>
-                        <option value="low">Thấp</option>
-                        <option value="medium">Trung bình</option>
-                        <option value="high">Cao</option>
+                        <option value="low" <?= $taskPriority === 'low' ? 'selected' : '' ?>>Thấp</option>
+                        <option value="medium" <?= $taskPriority === 'medium' ? 'selected' : '' ?>>Trung bình</option>
+                        <option value="high" <?= $taskPriority === 'high' ? 'selected' : '' ?>>Cao</option>
                     </select>
                 </div>
             </div>

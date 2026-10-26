@@ -142,19 +142,35 @@ class Task extends BaseModel
 
         $this->db->beginTransaction();
         try {
-            $stmt = $this->db->prepare(
-                "UPDATE cong_viec
-                 SET start_date = :start_date,
-                     deadline = :deadline,
-                     status = 'assigned',
-                     updated_at = NOW()
-                 WHERE id = :id"
-            );
-            $ok = $stmt->execute([
+            $fields = [
+                'start_date = :start_date',
+                'deadline = :deadline',
+                "status = 'assigned'",
+                'updated_at = NOW()',
+            ];
+            $params = [
                 'id' => $id,
                 'start_date' => $data['start_date'],
                 'deadline' => $data['deadline'],
-            ]);
+            ];
+
+            if (isset($data['title']) && trim((string) $data['title']) !== '') {
+                $fields[] = 'title = :title';
+                $params['title'] = trim((string) $data['title']);
+            }
+            if (array_key_exists('description', $data) && $data['description'] !== null) {
+                $fields[] = 'description = :description';
+                $params['description'] = (string) $data['description'];
+            }
+            if (isset($data['priority']) && in_array($data['priority'], ['low', 'medium', 'high'], true)) {
+                $fields[] = 'priority = :priority';
+                $params['priority'] = $data['priority'];
+            }
+
+            $stmt = $this->db->prepare(
+                'UPDATE cong_viec SET ' . implode(', ', $fields) . ' WHERE id = :id'
+            );
+            $ok = $stmt->execute($params);
 
             if (!$ok || !$this->syncAssignees($id, $assigneeIds)) {
                 $this->db->rollBack();
@@ -404,7 +420,11 @@ class Task extends BaseModel
             if (in_array($st, ['assigned', 'in_progress'], true)) {
                 $stats['doing']++;
             }
-            if (!empty($task['deadline']) && $task['deadline'] < $today && !in_array($st, ['approved'], true)) {
+            $deadlineStr = trim((string) ($task['deadline'] ?? ''));
+            $deadlineDate = ($deadlineStr !== '' && !str_starts_with($deadlineStr, '0000-00-00'))
+                ? date('Y-m-d', strtotime($deadlineStr))
+                : null;
+            if ($deadlineDate !== null && $deadlineDate < $today && !in_array($st, ['approved'], true)) {
                 $stats['overdue']++;
             }
         }

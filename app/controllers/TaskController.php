@@ -119,7 +119,7 @@ class TaskController extends BaseController
                 'title' => $title,
                 'description' => $validated['description'] ?? '',
                 'priority' => $validated['priority'],
-                'deadline' => $this->normalizeDateInput($validated['deadline'] ?? null),
+                'deadline' => $this->normalizeDateTimeInput($validated['deadline'] ?? null) ?? date('Y-m-d', strtotime('+7 days')),
                 'created_by' => Auth::user()['id'],
                 'expected_score' => (int) ($validated['expected_score'] ?? 0),
             ]);
@@ -208,16 +208,39 @@ class TaskController extends BaseController
             }
         }
 
-        $ok = $taskModel->assign($id, [
+        $rawStartDate = trim((string) ($_POST['start_date'] ?? ''));
+        $rawDeadline = trim((string) ($_POST['deadline'] ?? ''));
+        $existingStart = (!empty($task['start_date']) && !str_starts_with((string) $task['start_date'], '0000-00-00'))
+            ? date('Y-m-d', strtotime((string) $task['start_date']))
+            : date('Y-m-d');
+        $existingDeadline = (!empty($task['deadline']) && !str_starts_with((string) $task['deadline'], '0000-00-00'))
+            ? (string) $task['deadline']
+            : date('Y-m-d', strtotime('+7 days'));
+
+        $startDate = $rawStartDate !== '' ? ($this->normalizeDateInput($rawStartDate) ?? $existingStart) : $existingStart;
+        $deadline = $rawDeadline !== '' ? ($this->normalizeDateTimeInput($rawDeadline) ?? $existingDeadline) : $existingDeadline;
+
+        $assignPayload = [
             'assignee_ids' => $assigneeIds,
-            'start_date' => $_POST['start_date'] ?? date('Y-m-d'),
-            'deadline' => $_POST['deadline'] ?? $task['deadline'],
-        ]);
+            'start_date' => $startDate,
+            'deadline' => $deadline,
+        ];
+        if (!empty($_POST['assignment_title'])) {
+            $assignPayload['title'] = \App\Core\Validator::sanitizeString((string) $_POST['assignment_title']);
+        }
+        if (isset($_POST['detailed_description']) && trim((string) $_POST['detailed_description']) !== '') {
+            $assignPayload['description'] = \App\Core\Validator::sanitizeString((string) $_POST['detailed_description']);
+        }
+        if (!empty($_POST['priority']) && in_array($_POST['priority'], ['low', 'medium', 'high'], true)) {
+            $assignPayload['priority'] = (string) $_POST['priority'];
+        }
+
+        $ok = $taskModel->assign($id, $assignPayload);
 
         if ($ok) {
             (new Log())->create(Auth::user()['id'], 'assign', 'task', $id, 'Điều chỉnh phân công công việc');
             try {
-                $deadlineLabel = \format_date((string) ($_POST['deadline'] ?? $task['deadline']));
+                $deadlineLabel = \format_date((string) $deadline);
                 (new \App\Models\Notification())->notifyEvent(
                     $assigneeIds,
                     (int) Auth::user()['id'],
@@ -542,11 +565,30 @@ class TaskController extends BaseController
     private function normalizeDateInput(?string $value): ?string
     {
         $value = trim((string) $value);
-        if ($value === '') {
+        if ($value === '' || str_starts_with($value, '0000-00-00')) {
             return null;
         }
 
         $timestamp = strtotime($value);
-        return $timestamp === false ? $value : date('Y-m-d', $timestamp);
+        return $timestamp === false ? null : date('Y-m-d', $timestamp);
+    }
+
+    private function normalizeDateTimeInput(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '' || str_starts_with($value, '0000-00-00')) {
+            return null;
+        }
+
+        $timestamp = strtotime($value);
+        if ($timestamp === false) {
+            return null;
+        }
+
+        if (str_contains($value, 'T') || str_contains($value, ':')) {
+            return date('Y-m-d H:i:s', $timestamp);
+        }
+
+        return date('Y-m-d', $timestamp);
     }
 }

@@ -3,6 +3,7 @@ CREATE DATABASE IF NOT EXISTS `data` CHARACTER SET utf8 COLLATE utf8_general_ci;
 USE `data`;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS `file_recipients`;
 DROP TABLE IF EXISTS `thong_bao_nguoi_nhan`;
 DROP TABLE IF EXISTS `thong_bao`;
 DROP TABLE IF EXISTS `tep_dinh_kem`;
@@ -298,6 +299,7 @@ CREATE TABLE `tai_khoan` (
   `name` varchar(150) NOT NULL,
   `email` varchar(150) NOT NULL,
   `password` varchar(255) NOT NULL,
+  `public_key_jwk` longtext DEFAULT NULL,
   `role` enum('admin','manager','employee') NOT NULL DEFAULT 'employee',
   `department` varchar(100) DEFAULT NULL,
   `status` enum('active','inactive') NOT NULL DEFAULT 'active',
@@ -325,17 +327,21 @@ INSERT INTO `tai_khoan` (`id`, `name`, `email`, `password`, `role`, `department`
 
 CREATE TABLE `tep_dinh_kem` (
   `id` int(11) NOT NULL,
-  `task_id` int(11) NOT NULL,
+  `task_id` int(11) DEFAULT NULL,
+  `project_id` int(11) DEFAULT NULL,
+  `module_name` varchar(50) NOT NULL DEFAULT 'cong_viec',
   `original_name` varchar(255) NOT NULL,
   `stored_name` varchar(255) NOT NULL,
   `mime_type` varchar(150) DEFAULT NULL,
   `file_size` int(11) NOT NULL,
-  `encrypted_path` varchar(255) NOT NULL,
+  `encrypted_path` varchar(255) DEFAULT NULL,
+  `encrypted_blob` longblob DEFAULT NULL,
+  `storage_mode` varchar(20) NOT NULL DEFAULT 'db',
   `uploaded_by` int(11) NOT NULL,
   `file_type` varchar(20) DEFAULT 'employee',
   `upload_reason` varchar(255) DEFAULT NULL,
   `encrypted_key` longtext DEFAULT NULL COMMENT 'Khóa AES được bọc bằng RSA (base64)',
-  `iv` varchar(255) DEFAULT NULL COMMENT 'IV cho AES-256-CBC (base64)',
+  `iv` varchar(255) DEFAULT NULL COMMENT 'IV cho AES-256-CBC/GCM (base64)',
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
@@ -587,6 +593,20 @@ CREATE TABLE IF NOT EXISTS `thong_bao_nguoi_nhan` (
   KEY `idx_tbnn_notif` (`notification_id`),
   CONSTRAINT `fk_tbnn_notif` FOREIGN KEY (`notification_id`) REFERENCES `thong_bao` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_tbnn_user` FOREIGN KEY (`user_id`) REFERENCES `tai_khoan` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE IF NOT EXISTS `file_recipients` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `attachment_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `encrypted_key` longtext NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_attachment_user` (`attachment_id`, `user_id`),
+  KEY `idx_attachment_id` (`attachment_id`),
+  KEY `idx_user_id` (`user_id`),
+  CONSTRAINT `fk_file_recipients_attachment` FOREIGN KEY (`attachment_id`) REFERENCES `tep_dinh_kem` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_file_recipients_user` FOREIGN KEY (`user_id`) REFERENCES `tai_khoan` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 COMMIT;

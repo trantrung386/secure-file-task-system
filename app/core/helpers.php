@@ -163,13 +163,13 @@ function role_label(string $role): string
  */
 function format_date(?string $value): string
 {
-    if (!$value) {
+    if (!$value || str_starts_with(trim($value), '0000-00-00')) {
         return '-';
     }
 
     $time = strtotime($value);
-    if ($time === false) {
-        return $value;
+    if ($time === false || $time <= 0) {
+        return '-';
     }
 
     return date('d/m/Y', $time);
@@ -180,13 +180,13 @@ function format_date(?string $value): string
  */
 function format_datetime(?string $value): string
 {
-    if (!$value) {
+    if (!$value || str_starts_with(trim($value), '0000-00-00')) {
         return '-';
     }
 
     $time = strtotime($value);
-    if ($time === false) {
-        return $value;
+    if ($time === false || $time <= 0) {
+        return '-';
     }
 
     return date('d/m/Y H:i', $time);
